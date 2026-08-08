@@ -1,6 +1,6 @@
 # NEB Oxygen Migration Toolkit
 
-Automated DFT workflow for computing **oxygen vacancy migration barriers in perovskite oxides** (LaNiO₃, LaVO₃, LaNi₀.₅V₀.₅O₃) using **VASP**, **pymatgen**, **ASE**, and the **climbing-image Nudged Elastic Band (CI-NEB)** method on SLURM-based HPC clusters.
+Automated DFT workflow for computing **oxygen vacancy migration barriers in perovskite oxides** using **VASP**, **pymatgen**, **ASE**, and the **climbing-image Nudged Elastic Band (CI-NEB)** method on SLURM-based HPC clusters.
 
 The toolkit takes a relaxed bulk structure and, end to end, predicts favorable vacancy sites, enumerates symmetry-distinct O→vacancy hop pathways, generates and interpolates NEB images, submits and monitors multi-stage VASP calculations with automatic restarts, and post-processes the results into energy barriers, transition-state analyses, and publication-quality figures.
 
@@ -52,7 +52,7 @@ The toolkit takes a relaxed bulk structure and, end to end, predicts favorable v
 |---|---|
 | `relax_NEB/` | Core NEB workflow: relaxation, path generation, multi-stage NEB, SLURM + VASP I/O, analysis, visualization |
 | `Oxygen_pathways/` | Vacancy prediction and O-hop pathway enumeration (pre-NEB stage) |
-| `examples/data/` | Sample outputs: converged pathways for LaNiO₃, LaVO₃, LaNi₀.₅V₀.₅O₃ (energy profiles, migrating-O trajectories, bond analysis, per-image POSCARs) |
+| `examples/data/` | Sample output: a converged LaNiO₃ pathway (energy profile, migrating-O trajectory, bond analysis, per-image POSCARs) |
 | `docs/` | Component reference and workflow notes |
 
 ## Installation
@@ -95,7 +95,7 @@ Example output (LaNiO₃, O→V<sub>O</sub> hop, 7 images): see
 
 ## Physics background
 
-Oxygen-ion transport governs the performance of solid-oxide fuel cell cathodes, oxygen-permeation membranes, and resistive-switching memristors. The rate-limiting step is the hop of a lattice O²⁻ into a neighboring vacancy; its activation energy is the NEB barrier computed here. Comparing barriers across LaNiO₃, LaVO₃, and the mixed B-site LaNi₀.₅V₀.₅O₃ quantifies how B-site chemistry and octahedral distortion tune ionic mobility.
+Oxygen-ion transport governs the performance of solid-oxide fuel cell cathodes, oxygen-permeation membranes, and resistive-switching memristors. The rate-limiting step is the hop of a lattice O²⁻ into a neighboring vacancy; its activation energy is the NEB barrier computed here.
 
 ## Requirements
 
