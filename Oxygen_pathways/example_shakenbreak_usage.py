@@ -5,15 +5,15 @@ Example Usage of ShakeNBreak-Enhanced Oxygen Migration Workflow
 """
 
 import sys
-#sys.path.append('/nfs/home/6/nguyenm/pymatgen-packages')  # UPDATE THIS PATH
-sys.path.append('/Users/tiennguyen/Downloads/relax_NEB_examples')
+#sys.path.append('/path/to/packages')  # UPDATE THIS PATH
+sys.path.append('/path/to/packages')
 
 from Oxygen_pathways.oxygen_workflow_shakenbreak import run_shakenbreak_workflow
 
 # Configuration for VASP calculations
 config = {
     # POTCAR settings
-    'potcar_path': "/nfs/home/6/nguyenm/sensor/POTCAR-files/potpaw_PBE_54",
+    'potcar_path': "/path/to/potcar/potpaw_PBE_54",
     'potcar_mapping': {
         "O": "O_s", 
         "La": "La", 

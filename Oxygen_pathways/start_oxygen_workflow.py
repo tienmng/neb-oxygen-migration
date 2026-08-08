@@ -1,14 +1,14 @@
 
 import sys
 # Import VASP calculation modules
-sys.path.append('/nfs/home/6/nguyenm/pymatgen-packages/Oxygen_pathways')  # UPDATE THIS PATH
-#sys.path.append('/Users/tiennguyen/Downloads/relax_NEB_examples/pathways/pathways_v1')
+sys.path.append('/path/to/Oxygen_pathways')  # UPDATE THIS PATH
+#sys.path.append('/path/to/pathways')
 
 from oxygen_workflow_improved import run_improved_workflow
 
 # Configuration
 config = {
-    'potcar_path': "/nfs/home/6/nguyenm/sensor/POTCAR-files/potpaw_PBE_54",
+    'potcar_path': "/path/to/potcar/potpaw_PBE_54",
     'potcar_mapping': {
         "O": "O_s", "La": "La", "Ni": "Ni_pv", "V": "V_sv",
         "Fe": "Fe_pv", "Co": "Co_pv", "Mn": "Mn_pv"

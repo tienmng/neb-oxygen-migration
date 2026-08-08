@@ -151,7 +151,7 @@ def example_with_convenience_functions():
     """Example using the convenience functions."""
     
     # Define settings
-    potcar_path = "/nfs/home/6/nguyenm/sensor/POTCAR-files/potpaw_PBE_54"
+    potcar_path = "/path/to/potcar/potpaw_PBE_54"
     potcar_mapping = {
         "O": "O_s", "La": "La", "Ni": "Ni_pv", "V": "V_sv",
         "Fe": "Fe_pv", "Co": "Co_pv", "Mn": "Mn_pv"

@@ -9,7 +9,7 @@ import os
 import sys
 import numpy as np
 from datetime import datetime
-sys.path.append('/nfs/home/6/nguyenm/pymatgen-packages/Oxygen_pathways')  # UPDATE THIS PATH
+sys.path.append('/path/to/Oxygen_pathways')  # UPDATE THIS PATH
 
 # Import the pathway finder and visualizer modules
 try:

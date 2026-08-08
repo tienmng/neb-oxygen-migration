@@ -2,22 +2,22 @@
   "system": "LaNiO3",
   "pathway": "pathway_001_7images",
   "output_stem": "LaNiO3_pathway_001_7images",
-  "run_dir": "/.nfs/home/6/nguyenm/sensor/pymatgen/NEB-PBE_U/La-OVacancy/LaNiO3/pathway_001_7images",
-  "neb_dir": "/.nfs/home/6/nguyenm/sensor/pymatgen/NEB-PBE_U/La-OVacancy/LaNiO3/pathway_001_7images/multistage_neb/neb_stage4",
+  "run_dir": "/path/to/calculations/NEB-PBE_U/La-OVacancy/LaNiO3/pathway_001_7images",
+  "neb_dir": "/path/to/calculations/NEB-PBE_U/La-OVacancy/LaNiO3/pathway_001_7images/multistage_neb/neb_stage4",
   "extracted_utc": "2026-07-08T19:40:20+00:00",
   "moving_oxygen_index": 58,
-  "moving_index_source": "/.nfs/home/6/nguyenm/sensor/pymatgen/NEB-PBE_U/La-OVacancy/LaNiO3/pathway_001_7images/atom_movements.json",
+  "moving_index_source": "/path/to/calculations/NEB-PBE_U/La-OVacancy/LaNiO3/pathway_001_7images/atom_movements.json",
   "n_images": 7,
   "n_points": 9,
   "endpoints": {
     "initial": {
       "energy_eV": -779.17260201,
-      "source": "/.nfs/home/6/nguyenm/sensor/pymatgen/NEB-PBE_U/La-OVacancy/LaNiO3/pathway_001_7images/relax_initial/stage1",
+      "source": "/path/to/calculations/NEB-PBE_U/La-OVacancy/LaNiO3/pathway_001_7images/relax_initial/stage1",
       "from_relaxation": true
     },
     "final": {
       "energy_eV": -779.17082742,
-      "source": "/.nfs/home/6/nguyenm/sensor/pymatgen/NEB-PBE_U/La-OVacancy/LaNiO3/pathway_001_7images/relax_final/stage1",
+      "source": "/path/to/calculations/NEB-PBE_U/La-OVacancy/LaNiO3/pathway_001_7images/relax_final/stage1",
       "from_relaxation": true
     }
   },
@@ -200,7 +200,7 @@
       "NCORE": "64",
       "MAGMOM": "24*0.6 24*5.0 71*0.6"
     },
-    "incar_path": "/.nfs/home/6/nguyenm/sensor/pymatgen/NEB-PBE_U/La-OVacancy/LaNiO3/pathway_001_7images/multistage_neb/neb_stage4/00/INCAR",
+    "incar_path": "/path/to/calculations/NEB-PBE_U/La-OVacancy/LaNiO3/pathway_001_7images/multistage_neb/neb_stage4/00/INCAR",
     "incar_full": {
       "ALGO": "Fast",
       "EDIFF": "1e-06",
@@ -256,7 +256,7 @@
     {
       "image": 0,
       "dir": "00",
-      "endpoint_source": "/.nfs/home/6/nguyenm/sensor/pymatgen/NEB-PBE_U/La-OVacancy/LaNiO3/pathway_001_7images/relax_initial/stage1",
+      "endpoint_source": "/path/to/calculations/NEB-PBE_U/La-OVacancy/LaNiO3/pathway_001_7images/relax_initial/stage1",
       "energy_eV": -779.17260201,
       "efermi": null,
       "band_gap_eV": 0.008700000000000152,
@@ -827,7 +827,7 @@
     {
       "image": 8,
       "dir": "08",
-      "endpoint_source": "/.nfs/home/6/nguyenm/sensor/pymatgen/NEB-PBE_U/La-OVacancy/LaNiO3/pathway_001_7images/relax_final/stage1",
+      "endpoint_source": "/path/to/calculations/NEB-PBE_U/La-OVacancy/LaNiO3/pathway_001_7images/relax_final/stage1",
       "energy_eV": -779.17082742,
       "efermi": null,
       "band_gap_eV": 0.004400000000000404,

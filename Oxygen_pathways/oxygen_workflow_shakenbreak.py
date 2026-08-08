@@ -17,9 +17,9 @@ from pymatgen.core import Structure, Element
 from pymatgen.io.vasp import Poscar
 
 # Import VASP calculation modules
-sys.path.append('/Users/tiennguyen/Downloads/relax_NEB_examples/Oxygen_pathways')
+sys.path.append('/path/to/Oxygen_pathways')
 
-#sys.path.append('/nfs/home/6/nguyenm/pymatgen-packages/Oxygen_pathways')  # UPDATE THIS PATH
+#sys.path.append('/path/to/Oxygen_pathways')  # UPDATE THIS PATH
 
 # Import the enhanced analysis module
 from enhanced_oxygen_migration_analysis import analyze_oxygen_migration
@@ -885,7 +885,7 @@ def run_shakenbreak_workflow(structure_file: str,
 if __name__ == "__main__":
     # Configuration
     config = {
-        'potcar_path': "/nfs/home/6/nguyenm/sensor/POTCAR-files/potpaw_PBE_54",
+        'potcar_path': "/path/to/potcar/potpaw_PBE_54",
         'potcar_mapping': {
             "O": "O_s", "La": "La", "Ni": "Ni_pv", "V": "V_sv",
             "Fe": "Fe_pv", "Co": "Co_pv", "Mn": "Mn_pv"

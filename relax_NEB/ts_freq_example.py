@@ -17,7 +17,7 @@ logging.basicConfig(
 )
 
 # Add the module directory to path
-module_dir = os.path.abspath(os.path.join(os.getcwd(), '/nfs/home/6/nguyenm/pymatgen-packages/relax_NEB'))
+module_dir = os.path.abspath(os.path.join(os.getcwd(), '/path/to/relax_NEB'))
 if module_dir not in sys.path:
     sys.path.insert(0, module_dir)
     print(f"Added {module_dir} to Python path")
@@ -40,7 +40,7 @@ NEB_DIR = "./multistage_neb/neb_stage3"  # Use the final NEB stage directory
 
 # System-specific settings (match your NEB calculation)
 MOVING_ATOM_IDX = 51  # Index of the moving oxygen atom
-POTCAR_PATH = "/nfs/home/6/nguyenm/sensor/POTCAR-files/potpaw_PBE_54"
+POTCAR_PATH = "/path/to/potcar/potpaw_PBE_54"
 POTCAR_MAPPING = {
     "O": "O_s",
     "La": "La",

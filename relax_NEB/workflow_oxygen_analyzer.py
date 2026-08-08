@@ -7,7 +7,7 @@ Example integration with your existing NEB workflow
 import sys
 import os
 print("Initializing components...")
-module_dir = os.path.abspath(os.path.join(os.getcwd(), '/nfs/home/6/nguyenm/pymatgen-packages/relax_NEB'))
+module_dir = os.path.abspath(os.path.join(os.getcwd(), '/path/to/relax_NEB'))
 if module_dir not in sys.path:
     sys.path.insert(0, module_dir)
     print(f"Added {module_dir} to Python path")
@@ -26,7 +26,7 @@ from energy_analyzer import NEBEnergyAnalyzer
 from oxygen_migration_analyzer_complete import analyze_oxygen_migration, quick_oxygen_analysis
 
 # Your existing configuration
-potcar_path = "/nfs/home/6/nguyenm/sensor/POTCAR-files/potpaw_PBE_54"
+potcar_path = "/path/to/potcar/potpaw_PBE_54"
 potcar_mapping = {
     "O": "O_s", "La": "La", "Ni": "Ni_pv", "V": "V_sv",
     "Fe": "Fe_pv", "Co": "Co_pv", "Mn": "Mn_pv"

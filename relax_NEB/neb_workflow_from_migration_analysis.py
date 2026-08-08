@@ -27,7 +27,7 @@ print("COMPLETE CONTROL NEB WORKFLOW - PARALLEL RELAXATIONS")
 print("="*60)
 
 # Define your system-specific paths and settings
-potcar_path = "/nfs/home/6/nguyenm/sensor/POTCAR-files/potpaw_PBE_54"
+potcar_path = "/path/to/potcar/potpaw_PBE_54"
 #potcar_path = "potcars/"
 potcar_mapping = {
     "O": "O_s", "La": "La", "Ni": "Ni_pv", "V": "V_sv",
@@ -62,7 +62,7 @@ print()
 # =============================================================================
 print("Initializing components...")
 import sys
-module_dir = os.path.abspath(os.path.join(os.getcwd(), '/nfs/home/6/nguyenm/pymatgen-packages/relax_NEB'))
+module_dir = os.path.abspath(os.path.join(os.getcwd(), '/path/to/relax_NEB'))
 if module_dir not in sys.path:
     sys.path.insert(0, module_dir)
     print(f"Added {module_dir} to Python path")
