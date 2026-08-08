@@ -1,0 +1,13 @@
+pymatgen>=2024.1.1
+ase>=3.22
+numpy>=1.24
+scipy>=1.10
+pandas>=2.0
+matplotlib>=3.7
+seaborn>=0.13
+networkx>=3.0
+tqdm>=4.65
+Pillow>=10.0
+
+# Optional: vacancy distortion sampling
+# shakenbreak>=3.2

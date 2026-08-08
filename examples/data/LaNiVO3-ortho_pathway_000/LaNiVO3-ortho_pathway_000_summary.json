@@ -1,0 +1,800 @@
+{
+  "system": "LaNiVO3-ortho",
+  "pathway": "pathway_000",
+  "output_stem": "LaNiVO3-ortho_pathway_000",
+  "run_dir": "/.nfs/home/6/nguyenm/sensor/pymatgen/NEB-PBE_U/La-OVacancy/LaNiVO3-ortho/pathway_000",
+  "neb_dir": "/.nfs/home/6/nguyenm/sensor/pymatgen/NEB-PBE_U/La-OVacancy/LaNiVO3-ortho/pathway_000/multistage_neb/neb_stage3",
+  "extracted_utc": "2026-07-08T19:56:45+00:00",
+  "moving_oxygen_index": 70,
+  "moving_index_source": "/.nfs/home/6/nguyenm/sensor/pymatgen/NEB-PBE_U/La-OVacancy/LaNiVO3-ortho/pathway_000/atom_movements.json",
+  "n_images": 5,
+  "n_points": 7,
+  "endpoints": {
+    "initial": {
+      "energy_eV": -1202.75156452,
+      "source": "/.nfs/home/6/nguyenm/sensor/pymatgen/NEB-PBE_U/La-OVacancy/LaNiVO3-ortho/pathway_000/relax_initial/stage1",
+      "from_relaxation": true
+    },
+    "final": {
+      "energy_eV": -1202.85914544,
+      "source": "/.nfs/home/6/nguyenm/sensor/pymatgen/NEB-PBE_U/La-OVacancy/LaNiVO3-ortho/pathway_000/relax_final/stage1",
+      "from_relaxation": true
+    }
+  },
+  "energetics": {
+    "n_points": 7,
+    "initial_energy_eV": -1202.75156452,
+    "final_energy_eV": -1202.85914544,
+    "ts_image": 3,
+    "ts_energy_eV": -1201.43718751,
+    "forward_barrier_eV": 1.31438,
+    "reverse_barrier_eV": 1.42196,
+    "reaction_energy_eV": -0.10758,
+    "is_endothermic": false,
+    "ts_distance_A": 1.4172719520996255
+  },
+  "migration_geometry": {
+    "points": [
+      {
+        "image": 0,
+        "frac": [
+          0.733653,
+          0.540906,
+          0.130098
+        ],
+        "cart_A": [
+          6.05039,
+          8.33938,
+          -2.04658
+        ]
+      },
+      {
+        "image": 1,
+        "frac": [
+          0.710808,
+          0.55797,
+          0.115958
+        ],
+        "cart_A": [
+          6.24075,
+          8.07998,
+          -1.82702
+        ]
+      },
+      {
+        "image": 2,
+        "frac": [
+          0.68618,
+          0.579075,
+          0.091974
+        ],
+        "cart_A": [
+          6.47602,
+          7.80053,
+          -1.45463
+        ]
+      },
+      {
+        "image": 3,
+        "frac": [
+          0.662153,
+          0.598007,
+          0.068113
+        ],
+        "cart_A": [
+          6.68702,
+          7.52791,
+          -1.08411
+        ]
+      },
+      {
+        "image": 4,
+        "frac": [
+          0.636663,
+          0.612192,
+          0.037298
+        ],
+        "cart_A": [
+          6.84478,
+          7.23879,
+          -0.60541
+        ]
+      },
+      {
+        "image": 5,
+        "frac": [
+          0.613715,
+          0.607113,
+          0.006502
+        ],
+        "cart_A": [
+          6.78722,
+          6.97856,
+          -0.12655
+        ]
+      },
+      {
+        "image": 6,
+        "frac": [
+          0.604246,
+          0.6041,
+          0.985901
+        ],
+        "cart_A": [
+          6.7775,
+          6.84923,
+          -15.33993
+        ]
+      }
+    ],
+    "end_to_end_distance_A": 2.769,
+    "path_length_A": 2.8858
+  },
+  "magnetism_summary": {
+    "total_magnetization_per_image": [
+      45.9999996,
+      49.999999,
+      49.9999984,
+      47.9999989,
+      41.9999989,
+      41.9999991,
+      49.9999989
+    ]
+  },
+  "transition_state_frequency": null,
+  "provenance": {
+    "incar": {
+      "ENCUT": "600.0",
+      "PREC": "Accurate",
+      "EDIFF": "1e-06",
+      "EDIFFG": "-0.01",
+      "ISMEAR": "0",
+      "SIGMA": "0.05",
+      "ALGO": "Fast",
+      "ISPIN": "2",
+      "IBRION": "1",
+      "ISIF": "2",
+      "NSW": "200",
+      "POTIM": "0.05",
+      "IOPT": "0",
+      "IMAGES": "5",
+      "SPRING": "-5",
+      "LCLIMB": "True",
+      "ICHAIN": "0",
+      "LDAU": "True",
+      "LDAUTYPE": "2",
+      "LDAUL": "0 2 2 0",
+      "LDAUU": "0 7 3 0",
+      "LDAUJ": "0.0 0.0 0.0 0.0",
+      "LMAXMIX": "6",
+      "LASPH": "True",
+      "LREAL": "False",
+      "NCORE": "16",
+      "MAGMOM": "32*0.6 32*5.0 95*0.6"
+    },
+    "incar_path": "/.nfs/home/6/nguyenm/sensor/pymatgen/NEB-PBE_U/La-OVacancy/LaNiVO3-ortho/pathway_000/multistage_neb/neb_stage3/00/INCAR",
+    "incar_full": {
+      "ALGO": "Fast",
+      "EDIFF": "1e-06",
+      "EDIFFG": "-0.01",
+      "ENCUT": "600.0",
+      "IBRION": "1",
+      "ICHAIN": "0",
+      "IMAGES": "5",
+      "IOPT": "0",
+      "ISIF": "2",
+      "ISMEAR": "0",
+      "ISPIN": "2",
+      "LASPH": "True",
+      "LCLIMB": "True",
+      "LDAU": "True",
+      "LDAUJ": "0.0 0.0 0.0 0.0",
+      "LDAUL": "0 2 2 0",
+      "LDAUTYPE": "2",
+      "LDAUU": "0 7 3 0",
+      "LMAXMIX": "6",
+      "LREAL": "False",
+      "LSCALAPACK": "True",
+      "LSCALU": "False",
+      "MAGMOM": "32*0.6 32*5.0 95*0.6",
+      "NCORE": "16",
+      "NELM": "199",
+      "NSW": "200",
+      "POTIM": "0.05",
+      "PREC": "Accurate",
+      "SIGMA": "0.05",
+      "SPRING": "-5"
+    },
+    "kpoints": {
+      "raw": "Automatic mesh with kspacing=0.3\n0\nGamma\n2 2 2",
+      "kspacing": 0.3,
+      "mesh": [
+        2,
+        2,
+        2
+      ],
+      "scheme": "Gamma"
+    },
+    "potcar_titles": [
+      "PAW_PBE La 06Sep2000",
+      "PAW_PBE Ni_pv 06Sep2000",
+      "PAW_PBE V_sv 02Aug2007",
+      "PAW_PBE O_s 07Sep2000"
+    ],
+    "vasp_version": "vasp.6.4.2"
+  },
+  "per_image": [
+    {
+      "image": 0,
+      "dir": "00",
+      "endpoint_source": "/.nfs/home/6/nguyenm/sensor/pymatgen/NEB-PBE_U/La-OVacancy/LaNiVO3-ortho/pathway_000/relax_initial/stage1",
+      "energy_eV": -1202.75156452,
+      "efermi": null,
+      "band_gap_eV": 0.9577999999999989,
+      "cbm_eV": 8.9736,
+      "vbm_eV": 8.0158,
+      "is_gap_direct": false,
+      "max_force_eV_per_A": 0.00950529,
+      "electronic_converged": true,
+      "total_magnetization": 45.9999996,
+      "_per_ion_magmom": null,
+      "_per_ion_charge": null,
+      "lattice": {
+        "a": 11.36972,
+        "b": 11.17772,
+        "c": 15.53366,
+        "alpha": 89.775,
+        "beta": 90.003,
+        "gamma": 89.984,
+        "volume": 1974.1199
+      },
+      "formula": "La32 V16 Ni16 O95",
+      "nsites": 159,
+      "local_env": {
+        "moving_index": 70,
+        "moving_element": "O",
+        "r_cut_A": 3.2,
+        "cation_coordination": 4,
+        "nearest_cations": [
+          {
+            "element": "V",
+            "index": 54,
+            "distance_A": 1.927
+          },
+          {
+            "element": "Ni",
+            "index": 38,
+            "distance_A": 2.0718
+          },
+          {
+            "element": "La",
+            "index": 14,
+            "distance_A": 2.4518
+          },
+          {
+            "element": "La",
+            "index": 28,
+            "distance_A": 2.5625
+          }
+        ],
+        "by_element": {
+          "V": {
+            "count": 1,
+            "min": 1.927,
+            "max": 1.927,
+            "avg": 1.927
+          },
+          "La": {
+            "count": 2,
+            "min": 2.4518,
+            "max": 2.5625,
+            "avg": 2.5072
+          },
+          "Ni": {
+            "count": 1,
+            "min": 2.0718,
+            "max": 2.0718,
+            "avg": 2.0718
+          }
+        }
+      }
+    },
+    {
+      "image": 1,
+      "dir": "01",
+      "energy_eV": null,
+      "efermi": null,
+      "band_gap_eV": null,
+      "cbm_eV": null,
+      "vbm_eV": null,
+      "is_gap_direct": null,
+      "max_force_eV_per_A": null,
+      "electronic_converged": null,
+      "total_magnetization": 49.999999,
+      "_per_ion_magmom": null,
+      "_per_ion_charge": null,
+      "lattice": {
+        "a": 11.36972,
+        "b": 11.17772,
+        "c": 15.53366,
+        "alpha": 89.775,
+        "beta": 90.003,
+        "gamma": 89.984,
+        "volume": 1974.1199
+      },
+      "local_env": {
+        "moving_index": 70,
+        "moving_element": "O",
+        "r_cut_A": 3.2,
+        "cation_coordination": 4,
+        "nearest_cations": [
+          {
+            "element": "Ni",
+            "index": 38,
+            "distance_A": 2.0026
+          },
+          {
+            "element": "V",
+            "index": 54,
+            "distance_A": 2.1538
+          },
+          {
+            "element": "La",
+            "index": 14,
+            "distance_A": 2.3787
+          },
+          {
+            "element": "La",
+            "index": 28,
+            "distance_A": 2.433
+          }
+        ],
+        "by_element": {
+          "V": {
+            "count": 1,
+            "min": 2.1538,
+            "max": 2.1538,
+            "avg": 2.1538
+          },
+          "La": {
+            "count": 2,
+            "min": 2.3787,
+            "max": 2.433,
+            "avg": 2.4059
+          },
+          "Ni": {
+            "count": 1,
+            "min": 2.0026,
+            "max": 2.0026,
+            "avg": 2.0026
+          }
+        }
+      }
+    },
+    {
+      "image": 2,
+      "dir": "02",
+      "energy_eV": null,
+      "efermi": null,
+      "band_gap_eV": null,
+      "cbm_eV": null,
+      "vbm_eV": null,
+      "is_gap_direct": null,
+      "max_force_eV_per_A": null,
+      "electronic_converged": null,
+      "total_magnetization": 49.9999984,
+      "_per_ion_magmom": null,
+      "_per_ion_charge": null,
+      "lattice": {
+        "a": 11.36972,
+        "b": 11.17772,
+        "c": 15.53366,
+        "alpha": 89.775,
+        "beta": 90.003,
+        "gamma": 89.984,
+        "volume": 1974.1199
+      },
+      "local_env": {
+        "moving_index": 70,
+        "moving_element": "O",
+        "r_cut_A": 3.2,
+        "cation_coordination": 4,
+        "nearest_cations": [
+          {
+            "element": "Ni",
+            "index": 38,
+            "distance_A": 1.9215
+          },
+          {
+            "element": "La",
+            "index": 14,
+            "distance_A": 2.3174
+          },
+          {
+            "element": "La",
+            "index": 28,
+            "distance_A": 2.3394
+          },
+          {
+            "element": "V",
+            "index": 54,
+            "distance_A": 2.6417
+          }
+        ],
+        "by_element": {
+          "V": {
+            "count": 1,
+            "min": 2.6417,
+            "max": 2.6417,
+            "avg": 2.6417
+          },
+          "La": {
+            "count": 2,
+            "min": 2.3174,
+            "max": 2.3394,
+            "avg": 2.3284
+          },
+          "Ni": {
+            "count": 1,
+            "min": 1.9215,
+            "max": 1.9215,
+            "avg": 1.9215
+          }
+        }
+      }
+    },
+    {
+      "image": 3,
+      "dir": "03",
+      "energy_eV": null,
+      "efermi": null,
+      "band_gap_eV": null,
+      "cbm_eV": null,
+      "vbm_eV": null,
+      "is_gap_direct": null,
+      "max_force_eV_per_A": null,
+      "electronic_converged": null,
+      "total_magnetization": 47.9999989,
+      "_per_ion_magmom": null,
+      "_per_ion_charge": null,
+      "lattice": {
+        "a": 11.36972,
+        "b": 11.17772,
+        "c": 15.53366,
+        "alpha": 89.775,
+        "beta": 90.003,
+        "gamma": 89.984,
+        "volume": 1974.1199
+      },
+      "local_env": {
+        "moving_index": 70,
+        "moving_element": "O",
+        "r_cut_A": 3.2,
+        "cation_coordination": 5,
+        "nearest_cations": [
+          {
+            "element": "Ni",
+            "index": 38,
+            "distance_A": 1.9001
+          },
+          {
+            "element": "La",
+            "index": 28,
+            "distance_A": 2.331
+          },
+          {
+            "element": "La",
+            "index": 14,
+            "distance_A": 2.3721
+          },
+          {
+            "element": "V",
+            "index": 62,
+            "distance_A": 2.7605
+          },
+          {
+            "element": "V",
+            "index": 54,
+            "distance_A": 3.1919
+          }
+        ],
+        "by_element": {
+          "V": {
+            "count": 2,
+            "min": 2.7605,
+            "max": 3.1919,
+            "avg": 2.9762
+          },
+          "La": {
+            "count": 2,
+            "min": 2.331,
+            "max": 2.3721,
+            "avg": 2.3516
+          },
+          "Ni": {
+            "count": 1,
+            "min": 1.9001,
+            "max": 1.9001,
+            "avg": 1.9001
+          }
+        }
+      }
+    },
+    {
+      "image": 4,
+      "dir": "04",
+      "energy_eV": null,
+      "efermi": null,
+      "band_gap_eV": null,
+      "cbm_eV": null,
+      "vbm_eV": null,
+      "is_gap_direct": null,
+      "max_force_eV_per_A": null,
+      "electronic_converged": null,
+      "total_magnetization": 41.9999989,
+      "_per_ion_magmom": null,
+      "_per_ion_charge": null,
+      "lattice": {
+        "a": 11.36972,
+        "b": 11.17772,
+        "c": 15.53366,
+        "alpha": 89.775,
+        "beta": 90.003,
+        "gamma": 89.984,
+        "volume": 1974.1199
+      },
+      "local_env": {
+        "moving_index": 70,
+        "moving_element": "O",
+        "r_cut_A": 3.2,
+        "cation_coordination": 4,
+        "nearest_cations": [
+          {
+            "element": "Ni",
+            "index": 38,
+            "distance_A": 1.9631
+          },
+          {
+            "element": "V",
+            "index": 62,
+            "distance_A": 2.2084
+          },
+          {
+            "element": "La",
+            "index": 28,
+            "distance_A": 2.4275
+          },
+          {
+            "element": "La",
+            "index": 14,
+            "distance_A": 2.6365
+          }
+        ],
+        "by_element": {
+          "V": {
+            "count": 1,
+            "min": 2.2084,
+            "max": 2.2084,
+            "avg": 2.2084
+          },
+          "La": {
+            "count": 2,
+            "min": 2.4275,
+            "max": 2.6365,
+            "avg": 2.532
+          },
+          "Ni": {
+            "count": 1,
+            "min": 1.9631,
+            "max": 1.9631,
+            "avg": 1.9631
+          }
+        }
+      }
+    },
+    {
+      "image": 5,
+      "dir": "05",
+      "energy_eV": null,
+      "efermi": null,
+      "band_gap_eV": null,
+      "cbm_eV": null,
+      "vbm_eV": null,
+      "is_gap_direct": null,
+      "max_force_eV_per_A": null,
+      "electronic_converged": null,
+      "total_magnetization": 41.9999991,
+      "_per_ion_magmom": null,
+      "_per_ion_charge": null,
+      "lattice": {
+        "a": 11.36972,
+        "b": 11.17772,
+        "c": 15.53366,
+        "alpha": 89.775,
+        "beta": 90.003,
+        "gamma": 89.984,
+        "volume": 1974.1199
+      },
+      "local_env": {
+        "moving_index": 70,
+        "moving_element": "O",
+        "r_cut_A": 3.2,
+        "cation_coordination": 6,
+        "nearest_cations": [
+          {
+            "element": "Ni",
+            "index": 38,
+            "distance_A": 2.0083
+          },
+          {
+            "element": "V",
+            "index": 62,
+            "distance_A": 2.0233
+          },
+          {
+            "element": "La",
+            "index": 28,
+            "distance_A": 2.5477
+          },
+          {
+            "element": "La",
+            "index": 3,
+            "distance_A": 2.7458
+          },
+          {
+            "element": "La",
+            "index": 23,
+            "distance_A": 2.9597
+          },
+          {
+            "element": "La",
+            "index": 14,
+            "distance_A": 3.1574
+          }
+        ],
+        "by_element": {
+          "V": {
+            "count": 1,
+            "min": 2.0233,
+            "max": 2.0233,
+            "avg": 2.0233
+          },
+          "La": {
+            "count": 4,
+            "min": 2.5477,
+            "max": 3.1574,
+            "avg": 2.8526
+          },
+          "Ni": {
+            "count": 1,
+            "min": 2.0083,
+            "max": 2.0083,
+            "avg": 2.0083
+          }
+        }
+      }
+    },
+    {
+      "image": 6,
+      "dir": "06",
+      "endpoint_source": "/.nfs/home/6/nguyenm/sensor/pymatgen/NEB-PBE_U/La-OVacancy/LaNiVO3-ortho/pathway_000/relax_final/stage1",
+      "energy_eV": -1202.85914544,
+      "efermi": null,
+      "band_gap_eV": 0.9080999999999992,
+      "cbm_eV": 8.9459,
+      "vbm_eV": 8.0378,
+      "is_gap_direct": false,
+      "max_force_eV_per_A": 0.00706464,
+      "electronic_converged": true,
+      "total_magnetization": 49.9999989,
+      "_per_ion_magmom": null,
+      "_per_ion_charge": null,
+      "lattice": {
+        "a": 11.36972,
+        "b": 11.17772,
+        "c": 15.53366,
+        "alpha": 89.775,
+        "beta": 90.003,
+        "gamma": 89.984,
+        "volume": 1974.1199
+      },
+      "local_env": {
+        "moving_index": 70,
+        "moving_element": "O",
+        "r_cut_A": 3.2,
+        "cation_coordination": 5,
+        "nearest_cations": [
+          {
+            "element": "V",
+            "index": 62,
+            "distance_A": 2.0233
+          },
+          {
+            "element": "Ni",
+            "index": 38,
+            "distance_A": 2.0459
+          },
+          {
+            "element": "La",
+            "index": 3,
+            "distance_A": 2.4803
+          },
+          {
+            "element": "La",
+            "index": 28,
+            "distance_A": 2.7174
+          },
+          {
+            "element": "La",
+            "index": 23,
+            "distance_A": 2.7305
+          }
+        ],
+        "by_element": {
+          "V": {
+            "count": 1,
+            "min": 2.0233,
+            "max": 2.0233,
+            "avg": 2.0233
+          },
+          "La": {
+            "count": 3,
+            "min": 2.4803,
+            "max": 2.7305,
+            "avg": 2.6427
+          },
+          "Ni": {
+            "count": 1,
+            "min": 2.0459,
+            "max": 2.0459,
+            "avg": 2.0459
+          }
+        }
+      }
+    }
+  ],
+  "energy_profile": [
+    {
+      "image": 0,
+      "distance_A": 0.0,
+      "energy_eV": -1202.75156452,
+      "rel_energy_eV": 0.0
+    },
+    {
+      "image": 1,
+      "distance_A": 0.3895298192202353,
+      "energy_eV": -1202.58969629,
+      "rel_energy_eV": 0.16186823000020922
+    },
+    {
+      "image": 2,
+      "distance_A": 0.9111802933025683,
+      "energy_eV": -1202.2799798,
+      "rel_energy_eV": 0.47158472000000984
+    },
+    {
+      "image": 3,
+      "distance_A": 1.4172719520996255,
+      "energy_eV": -1201.43718751,
+      "rel_energy_eV": 1.3143770100000438
+    },
+    {
+      "image": 4,
+      "distance_A": 1.9983229484246103,
+      "energy_eV": -1202.29121981,
+      "rel_energy_eV": 0.46034471000007215
+    },
+    {
+      "image": 5,
+      "distance_A": 2.5463650581932518,
+      "energy_eV": -1202.7105869,
+      "rel_energy_eV": 0.04097762000014882
+    },
+    {
+      "image": 6,
+      "distance_A": 2.8857960665753657,
+      "energy_eV": -1202.85914544,
+      "rel_energy_eV": -0.10758091999991848
+    }
+  ]
+}
