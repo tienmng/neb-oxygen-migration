@@ -1,0 +1,12 @@
+from sklearn.metrics import (average_precision_score, roc_auc_score,
+                             matthews_corrcoef, fbeta_score, confusion_matrix)
+y = np.array(all_oof_truth)
+p = np.array(all_oof_preds_prob)
+print(f"\nn = {len(y)}, crystalline rate = {y.mean():.2f}")
+print(f"PR-AUC = {average_precision_score(y, p):.3f}   ROC-AUC = {roc_auc_score(y, p):.3f}")
+for name, t in [("0.5", 0.5), ("max-F2", opt_threshold_dict["threshold_max_f2"])]:
+    pred = (p >= t).astype(int)
+    print(f"Threshold {name} ({t:.2f}): F2 = {fbeta_score(y, pred, beta=2):.3f}, "
+          f"MCC = {matthews_corrcoef(y, pred):.3f}")
+    print(confusion_matrix(y, pred))
+raise SystemExit
