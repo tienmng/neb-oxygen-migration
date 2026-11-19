@@ -38,3 +38,38 @@ train_truth = training_truth_for_modeling_df.values.reshape(-1)
 report_metrics(train_truth, training_preds_prob_int, 0.5, "FINAL model on all training data")
 report_metrics(train_truth, training_preds_prob_int, cv_threshold, "FINAL model on all training data")
 raise SystemExit   # stop before saving to BentoML
+
+
+#plot prob
+def plot_prob_hist(y_true, y_prob, threshold, title, filename):
+    y_true = np.asarray(y_true).astype(int)
+    y_prob = np.asarray(y_prob)
+    bins = np.linspace(0, 1, 21)
+    plt.figure(figsize=(6, 4))
+    plt.hist(y_prob[y_true == 0], bins=bins, alpha=0.6, label="Stable (truth)")
+    plt.hist(y_prob[y_true == 1], bins=bins, alpha=0.6, label="Crystalline (truth)")
+    plt.axvline(threshold, color="gray", lw=1, ls="--", label=f"Threshold {threshold:.2f}")
+    plt.xlabel("Predicted probability of crystallizing")
+    plt.ylabel("Number of formulations")
+    plt.title(title)
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(filename, dpi=150)
+    plt.close()
+    print(f"Saved {filename}")
+
+cv_threshold = opt_threshold_dict["threshold_max_f2"]
+report_metrics(all_oof_truth, all_oof_preds_prob, 0.5, "CV (unseen APIs)")
+report_metrics(all_oof_truth, all_oof_preds_prob, cv_threshold, "CV (unseen APIs)")
+
+plot_prob_hist(all_oof_truth, all_oof_preds_prob, cv_threshold,
+               "Cross-validation (unseen APIs)", "hist_cv_probabilities.png")
+
+#final model
+train_truth = training_truth_for_modeling_df.values.reshape(-1)
+report_metrics(train_truth, training_preds_prob_int, 0.5, "FINAL model on all training data")
+report_metrics(train_truth, training_preds_prob_int, cv_threshold, "FINAL model on all training data")
+
+plot_prob_hist(train_truth, training_preds_prob_int, cv_threshold,
+               "Final model on its own training data", "hist_final_train_probabilities.png")
+raise SystemExit
