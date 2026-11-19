@@ -73,3 +73,9 @@ report_metrics(train_truth, training_preds_prob_int, cv_threshold, "FINAL model 
 plot_prob_hist(train_truth, training_preds_prob_int, cv_threshold,
                "Final model on all training data", "hist_final_train_probabilities.png")
 raise SystemExit
+
+
+#see which atts being used each round of cv
+for i, atts in enumerate(outer_loop_dict['atts_list']):
+    print(f"Fold {i}: {len(atts)} features, dropped: {sorted(set(important_att_list) - set(atts))}")
+print("Final model features:", len(atts_to_include), atts_to_include)
