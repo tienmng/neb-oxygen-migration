@@ -71,5 +71,5 @@ report_metrics(train_truth, training_preds_prob_int, 0.5, "FINAL model on all tr
 report_metrics(train_truth, training_preds_prob_int, cv_threshold, "FINAL model on all training data")
 
 plot_prob_hist(train_truth, training_preds_prob_int, cv_threshold,
-               "Final model on its own training data", "hist_final_train_probabilities.png")
+               "Final model on all training data", "hist_final_train_probabilities.png")
 raise SystemExit
