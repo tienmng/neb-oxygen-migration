@@ -76,6 +76,20 @@ raise SystemExit
 
 
 #see which atts being used each round of cv
+outer_loop_cv = np.mean(outer_loop_dict['test_score'])
+
+# --- Features used in each fold ---
 for i, atts in enumerate(outer_loop_dict['atts_list']):
-    print(f"Fold {i}: {len(atts)} features, dropped: {sorted(set(important_att_list) - set(atts))}")
-print("Final model features:", len(atts_to_include), atts_to_include)
+    dropped = sorted(set(atts_to_consider) - set(atts))
+    print(f"Fold {i}: {len(atts)} features used, dropped: {dropped}")
+
+
+atts_to_include = dp_class.determine_near_zero_variance_features(train_data_df,
+                                                                 common_atts,
+                                                                 frequency_ratio_threshold=frequency_ratio_thresh,
+                                                                 unique_percentage_threshold=unique_percentage_thresh,
+                                                                 )
+
+# --- Features used by the final model ---
+print(f"\nFinal model: {len(atts_to_include)} features")
+print(atts_to_include)
