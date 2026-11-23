@@ -41,6 +41,7 @@ from pathlib import Path
 
 import matplotlib
 matplotlib.use("Agg")
+import matplotlib.patheffects as pe
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -137,15 +138,57 @@ plt.rcParams.update({"font.size": 9, "axes.titlesize": 11,
 
 
 # --- loading ---------------------------------------------------------------
-def _read(path, sheet=0):
+def _read_raw(path, sheet, header):
     path = Path(path)
-    return (pd.read_csv(path) if path.suffix.lower() == ".csv"
-            else pd.read_excel(path, sheet_name=sheet))
+    return (pd.read_csv(path, header=header) if path.suffix.lower() == ".csv"
+            else pd.read_excel(path, sheet_name=sheet, header=header))
+
+
+def _has_columns(df, required):
+    """True when every required token group resolves to some column."""
+    for options, contains in required:
+        try:
+            _find_column(df, options, contains)
+        except KeyError:
+            return False
+    return True
+
+
+def _read(path, sheet=0, header=None, required=(), max_scan=6):
+    """
+    Read a sheet, finding the header row when it is not the first.
+
+    Title rows and merged cells above the real header are common in these
+    workbooks, and the three input files do not agree on how many there are,
+    so the row is detected per file rather than set globally. header= forces
+    a row and skips detection.
+    """
+    if header is not None:
+        return _read_raw(path, sheet, header)
+
+    for candidate in range(max_scan):
+        try:
+            df = _read_raw(path, sheet, candidate)
+        except Exception:
+            continue
+        if not required or _has_columns(df, required):
+            if candidate:
+                print(f"note: {Path(path).name} -- header found on row "
+                      f"{candidate + 1}")
+            return df
+
+    # Nothing matched; return row 0 so the caller raises the informative error.
+    return _read_raw(path, sheet, 0)
 
 
 def _find_column(df, options, contains=None):
-    """Locate a column by exact name or substring, ignoring case."""
-    lower = {c.lower().strip(): c for c in df.columns}
+    """
+    Locate a column by exact name or substring, ignoring case.
+
+    Column names are coerced with str() because a spreadsheet header can come
+    back as a float or a NaN when the header row is not where pandas assumed.
+    """
+    lower = {str(c).lower().strip(): c for c in df.columns}
     for opt in options:
         if opt in lower:
             return lower[opt]
@@ -153,7 +196,11 @@ def _find_column(df, options, contains=None):
         for low, orig in lower.items():
             if contains in low:
                 return orig
-    raise KeyError(f"No column matching {options} in {list(df.columns)}")
+    raise KeyError(
+        f"No column matching {options} in {list(df.columns)}. "
+        "If those names look like numbers or 'Unnamed: N', the header row is "
+        "not the first row -- rerun with --header 1 (or 2)."
+    )
 
 
 def _normalise(name):
@@ -177,9 +224,17 @@ def extract_measured(df):
     return pd.DataFrame(found, index=df.index)
 
 
-def load_formulations(path, sheet=0):
+FORMULATION_REQUIRED = [(["api", "api_name"], "api"),
+                        (["smiles"], "smiles"),
+                        (["polymer", "polymer_name"], "polymer")]
+API_LIST_REQUIRED = [(["api", "api_name", "name", "compound", "molecule"],
+                      "api"),
+                     (["smiles"], "smiles")]
+
+
+def load_formulations(path, sheet=0, header=None):
     """The formulation table: one row per API x polymer x loading."""
-    raw = _read(path, sheet)
+    raw = _read(path, sheet, header, FORMULATION_REQUIRED)
     df = raw.rename(columns={k: v for k, v in RENAME.items()})
     df["smiles"] = [Chem.MolToSmiles(Chem.MolFromSmiles(s)) for s in df["smiles"]]
     for col, values in extract_measured(raw).items():
@@ -187,13 +242,13 @@ def load_formulations(path, sheet=0):
     return df
 
 
-def load_api_list(path, sheet=0):
+def load_api_list(path, sheet=0, header=None):
     """
     A table of APIs: name plus SMILES. Column names vary between the
     selection file and the held-out file, so both are located by pattern.
     Only the structure is read -- never an outcome column.
     """
-    df = _read(path, sheet)
+    df = _read(path, sheet, header, API_LIST_REQUIRED)
     name_col = _find_column(df, ["api", "api_name", "name", "compound",
                                  "molecule"], contains="api")
     smi_col = _find_column(df, ["smiles"], contains="smiles")
@@ -398,9 +453,46 @@ def _legend(ax, apis):
 
 
 def _annotate(ax, xy, names, fontsize=7.5):
-    for name, (x, y) in zip(names, xy):
-        ax.annotate(name, (x, y), xytext=(0, 9), textcoords="offset points",
-                    fontsize=fontsize, color=MUTED, ha="center")
+    """
+    Greedy anti-overlap labelling: offset above by default, flip below or
+    further out when the slot is taken. A white halo keeps a label readable
+    where it still lands on a point.
+    """
+    xy = np.asarray(xy, dtype=float)
+    if not len(xy):
+        return
+    span_x = (xy[:, 0].max() - xy[:, 0].min()) or 1.0
+    span_y = (xy[:, 1].max() - xy[:, 1].min()) or 1.0
+    taken = []
+    order = np.argsort(-xy[:, 1])
+    for i in order:
+        x, y = xy[i]
+        dy, va = 10, "bottom"
+        for cand_dy, cand_va in ((10, "bottom"), (-10, "top"),
+                                 (20, "bottom"), (-20, "top")):
+            key = (x / span_x, (y + cand_dy * span_y / 380) / span_y)
+            if not any(abs(key[0] - t[0]) < 0.085
+                       and abs(key[1] - t[1]) < 0.032 for t in taken):
+                taken.append(key)
+                dy, va = cand_dy, cand_va
+                break
+        ax.annotate(list(names)[i], (x, y), xytext=(0, dy),
+                    textcoords="offset points", fontsize=fontsize,
+                    color=MUTED, ha="center", va=va,
+                    path_effects=[pe.withStroke(linewidth=2.6,
+                                                foreground="white")])
+
+
+def _axis_drivers(pca, columns, n=3):
+    """The features that define each of the first two axes, with direction."""
+    lines = []
+    for axis in (0, 1):
+        load = pca.components_[axis]
+        top = np.argsort(np.abs(load))[::-1][:n]
+        parts = [f"{columns[k]} ({'+' if load[k] >= 0 else '\u2212'})"
+                 for k in top]
+        lines.append(f"PC{axis + 1} driven by: " + ", ".join(parts))
+    return lines
 
 
 # --- 1. similarity ---------------------------------------------------------
@@ -439,12 +531,16 @@ def fig_similarity(apis, sim, out):
 
 
 # --- 2. PCA ----------------------------------------------------------------
-def _pca_panel(ax, apis, X, label_all=True, arrow_labels=True):
+def _pca_panel(ax, apis, X, label_all=True):
     """
     One PCA panel. Scaler and PCA are fitted WITHOUT the held-out set, which
     is then projected in, so the axes are not defined by the test structures.
 
-    Returns the per-API PC1/PC2 scores.
+    Loading arrows are deliberately omitted: on a panel this dense they sat
+    on top of the points. The features that define each axis are listed above
+    the plot instead.
+
+    Returns the per-API PC1/PC2 scores and the driver lines.
     """
     sub = apis.loc[X.index]
     fit_mask = (sub["role"] != "holdout").values
@@ -465,37 +561,40 @@ def _pca_panel(ax, apis, X, label_all=True, arrow_labels=True):
         if held.any():
             _annotate(ax, scores[held, :2], X.index[held], fontsize=6.5)
 
-    if arrow_labels:
-        scale = np.abs(scores[:, :2]).max() * 0.72
-        for k, col in enumerate(X.columns):
-            dx, dy = pca.components_[:2, k] * scale
-            ax.annotate("", (dx, dy), xytext=(0, 0),
-                        arrowprops=dict(arrowstyle="-|>", color=ACCENT, lw=1.1))
-            ax.annotate(col, (dx, dy), fontsize=7, color=ACCENT,
-                        fontweight="semibold",
-                        xytext=(6 * np.sign(dx or 1), 6 * np.sign(dy or 1)),
-                        textcoords="offset points",
-                        ha="left" if dx >= 0 else "right",
-                        va="bottom" if dy >= 0 else "top")
-
     ax.axhline(0, color=GRID, lw=0.8)
     ax.axvline(0, color=GRID, lw=0.8)
     ax.margins(0.16)
     ax.set_xlabel(f"PC1 ({var[0]:.0%})")
     ax.set_ylabel(f"PC2 ({var[1]:.0%})")
-    return pd.DataFrame(scores[:, :2], index=X.index, columns=["PC1", "PC2"])
+    frame = pd.DataFrame(scores[:, :2], index=X.index, columns=["PC1", "PC2"])
+    return frame, _axis_drivers(pca, list(X.columns))
+
+
+def _titled_notes(ax, title, lines, start=1.012, step=0.030):
+    """
+    Title and note lines stacked above the axes, bottom-up, so nothing is
+    written over the data and no title padding has to be guessed.
+    """
+    for i, line in enumerate(lines):
+        ax.text(0.0, start + i * step, line, transform=ax.transAxes,
+                fontsize=7.5, color=MUTED, ha="left", va="bottom")
+    ax.text(0.0, start + len(lines) * step + 0.012, title,
+            transform=ax.transAxes, fontsize=11, fontweight="semibold",
+            color=INK, ha="left", va="bottom")
 
 
 def fig_pca(apis, out, which="structural"):
     X = feature_frame(apis, which, verbose=True)
-    fig, ax = plt.subplots(figsize=(10, 7.8))
-    _pca_panel(ax, apis, X)
+    fig, ax = plt.subplots(figsize=(10, 8.2))
+    _, drivers = _pca_panel(ax, apis, X)
     name, note = SET_TITLES[which]
-    ax.set_title(f"{name} property space (PCA)", pad=22)
-    ax.text(0, 1.01, f"{X.shape[1]} scaled features · {note} · "
-            f"{len(X)} of {len(apis)} APIs · axes fitted without the "
-            "held-out set", transform=ax.transAxes, fontsize=8, color=MUTED)
+
+    _titled_notes(ax, f"{name} property space (PCA)", drivers[::-1] + [
+        f"{X.shape[1]} scaled features · {note} · {len(X)} of {len(apis)} "
+        "APIs · axes fitted without the held-out set"])
     _legend(ax, apis.loc[X.index])
+    fig.text(0, -0.03, "Features: " + ", ".join(X.columns),
+             fontsize=7.5, color=MUTED, va="top")
     fig.savefig(out / "2_pca.png")
     plt.close(fig)
 
@@ -521,14 +620,14 @@ def fig_pca_comparison(apis, out, sets=COMPARE_DEFAULT):
         print("  skipped 6_pca_comparison.png (need at least two feature sets)")
         return
 
-    fig, axes = plt.subplots(1, len(frames), figsize=(6.2 * len(frames), 6.6))
-    rows = []
+    fig, axes = plt.subplots(1, len(frames), figsize=(6.6 * len(frames), 7.0))
+    rows, feature_lines = [], []
     for ax, (which, X) in zip(np.atleast_1d(axes), frames.items()):
-        scores = _pca_panel(ax, apis, X, label_all=False, arrow_labels=True)
+        scores, drivers = _pca_panel(ax, apis, X, label_all=False)
         name, note = SET_TITLES[which]
-        ax.set_title(f"{name}  ·  {X.shape[1]} features", pad=22)
-        ax.text(0, 1.01, f"{note} · {len(X)} APIs", transform=ax.transAxes,
-                fontsize=7.5, color=MUTED)
+        _titled_notes(ax, f"{name}  ·  {X.shape[1]} features",
+                      drivers[::-1] + [f"{note} · {len(X)} APIs"])
+        feature_lines.append(f"{name}: " + ", ".join(X.columns))
 
         # Scale-free: how far each API sits from the training centroid.
         sub = apis.loc[X.index]
@@ -543,8 +642,9 @@ def fig_pca_comparison(apis, out, sets=COMPARE_DEFAULT):
     fig.suptitle(f"Coverage under {len(frames)} feature sets", x=0.0,
                  ha="left",
                  fontsize=12, fontweight="semibold")
-    fig.tight_layout(rect=(0, 0, 1, 0.93))
-    note = ("Only held-out APIs are labelled, to keep the panels readable; "
+    fig.tight_layout(rect=(0, 0, 1, 0.90))
+    note = ("\n".join(feature_lines) + "\n\n"
+            "Only held-out APIs are labelled, to keep the panels readable; "
             "per-API distances are in pca_distances.csv. Structural uses "
             "connectivity alone; SME adds measured thermal and ADMET "
             "properties, so disagreement between the panels marks an API "
@@ -553,7 +653,7 @@ def fig_pca_comparison(apis, out, sets=COMPARE_DEFAULT):
         note += (" The Boruta panel is label-informed -- its axes were chosen "
                  "using training outcomes, so it cannot be used to argue the "
                  "held-out test is fair.")
-    fig.text(0, -0.02, note, fontsize=7.5, color=MUTED)
+    fig.text(0, -0.03, note, fontsize=7.5, color=MUTED, va="top")
     fig.savefig(out / "6_pca_comparison.png")
     plt.close(fig)
 
@@ -757,6 +857,9 @@ def main():
     p.add_argument("--holdout", default=None, help="held-out test API list")
     p.add_argument("--outdir", default="coverage_out")
     p.add_argument("--sheet", default=0)
+    p.add_argument("--header", type=int, default=None,
+                   help="0-based header row, forced for every file. Omit to "
+                        "detect it per file (title rows are handled).")
     p.add_argument("--features", default="structural",
                    choices=list(FEATURE_SETS),
                    help="feature set for the main PCA (default: structural)")
@@ -771,9 +874,9 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
     sheet = int(a.sheet) if str(a.sheet).isdigit() else a.sheet
 
-    df = load_formulations(a.input, sheet)
-    candidates = load_api_list(a.apis, sheet) if a.apis else None
-    holdout = load_api_list(a.holdout, sheet) if a.holdout else None
+    df = load_formulations(a.input, sheet, a.header)
+    candidates = load_api_list(a.apis, sheet, a.header) if a.apis else None
+    holdout = load_api_list(a.holdout, sheet, a.header) if a.holdout else None
 
     # Check the raw inputs before de-duplication collapses the evidence.
     report_overlap(df, candidates, holdout)
