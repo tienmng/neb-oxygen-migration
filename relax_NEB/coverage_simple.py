@@ -37,6 +37,8 @@ Needs rdkit, scikit-learn, umap-learn, scipy, pandas, matplotlib. Does not
 need the TeNNet-SAC stack.
 """
 import argparse
+import ast
+import json
 from pathlib import Path
 
 import matplotlib
@@ -138,10 +140,62 @@ plt.rcParams.update({"font.size": 9, "axes.titlesize": 11,
 
 
 # --- loading ---------------------------------------------------------------
+def _parse_record(text):
+    """
+    Parse one cell holding a record. Accepts JSON and Python-literal dicts,
+    and unwraps a single {"input_data": {...}} envelope.
+    """
+    if not isinstance(text, str) or "{" not in text:
+        return None
+    try:
+        obj = json.loads(text)
+    except Exception:
+        try:
+            obj = ast.literal_eval(text)
+        except Exception:
+            return None
+    if isinstance(obj, dict) and len(obj) == 1 and "input_data" in obj:
+        obj = obj["input_data"]
+    return obj if isinstance(obj, dict) else None
+
+
+def _expand_record_columns(df):
+    """
+    Expand any column whose cells hold a record dict into real columns.
+
+    The held-out workbook keeps each row as JSON under `input_data`, so the
+    fields the rest of this script looks for do not exist as columns until
+    this runs. Expanded fields win on a name collision, since they are the
+    detailed ones.
+    """
+    for col in list(df.columns):
+        series = df[col]
+        # Not `dtype == object`: pandas 3 gives text columns a dedicated
+        # string dtype, so test by exclusion instead.
+        if (pd.api.types.is_numeric_dtype(series)
+                or pd.api.types.is_bool_dtype(series)
+                or pd.api.types.is_datetime64_any_dtype(series)):
+            continue
+        parsed = series.map(_parse_record)
+        if parsed.notna().sum() < max(1, len(series) * 0.5):
+            continue
+        flat = pd.json_normalize(
+            [r if isinstance(r, dict) else {} for r in parsed])
+        flat.index = df.index
+        if flat.empty:
+            continue
+        print(f"note: expanded '{col}' into {flat.shape[1]} column(s)")
+        df = df.drop(columns=[col]).drop(
+            columns=[c for c in flat.columns if c in df.columns])
+        df = pd.concat([df, flat], axis=1)
+    return df
+
+
 def _read_raw(path, sheet, header):
     path = Path(path)
-    return (pd.read_csv(path, header=header) if path.suffix.lower() == ".csv"
-            else pd.read_excel(path, sheet_name=sheet, header=header))
+    df = (pd.read_csv(path, header=header) if path.suffix.lower() == ".csv"
+          else pd.read_excel(path, sheet_name=sheet, header=header))
+    return _expand_record_columns(df)
 
 
 def _has_columns(df, required):
@@ -188,7 +242,8 @@ def _find_column(df, options, contains=None):
     Column names are coerced with str() because a spreadsheet header can come
     back as a float or a NaN when the header row is not where pandas assumed.
     """
-    lower = {str(c).lower().strip(): c for c in df.columns}
+    lower = {str(c).lower().strip(): c for c in df.columns
+             if len(str(c)) < 80 and "{" not in str(c)}
     for opt in options:
         if opt in lower:
             return lower[opt]
