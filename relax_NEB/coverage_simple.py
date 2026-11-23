@@ -56,6 +56,10 @@ from sklearn.preprocessing import StandardScaler
 
 RDLogger.DisableLog("rdApp.*")
 
+# Typographic minus, held in a constant: a backslash escape is not allowed
+# inside an f-string expression before Python 3.12.
+MINUS = "\u2212"
+
 STABLE, UNSTABLE = "#2a78d6", "#d03b3b"   # blue/red: CVD-safe, unlike green/red
 ACCENT, MUTED, GRID, INK = "#eb6834", "#52514e", "#e4e3de", "#0b0b0b"
 
@@ -544,7 +548,7 @@ def _axis_drivers(pca, columns, n=3):
     for axis in (0, 1):
         load = pca.components_[axis]
         top = np.argsort(np.abs(load))[::-1][:n]
-        parts = [f"{columns[k]} ({'+' if load[k] >= 0 else '\u2212'})"
+        parts = ["{} ({})".format(columns[k], "+" if load[k] >= 0 else MINUS)
                  for k in top]
         lines.append(f"PC{axis + 1} driven by: " + ", ".join(parts))
     return lines
