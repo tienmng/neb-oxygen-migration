@@ -477,14 +477,20 @@ def feature_frame(apis, which, verbose=False):
 
 # --- drawing helpers -------------------------------------------------------
 def _face(apis):
-    """Tested APIs take an outcome colour; everything else is hollow."""
+    """
+    Tested APIs take an outcome colour; everything else is hollow.
+
+    Returned as RGBA tuples rather than a mix of names and tuples, which
+    older matplotlib will not accept as a single colour list.
+    """
+    to_rgba = plt.matplotlib.colors.to_rgba
     if "unstable_frac" not in apis:
-        return pd.Series(["#2a78d6" if r == "tested" else "white"
+        return pd.Series([to_rgba(STABLE if r == "tested" else "white")
                           for r in apis["role"]], index=apis.index)
     cmap = plt.matplotlib.colors.LinearSegmentedColormap.from_list(
         "d", [STABLE, "#f0efec", UNSTABLE])
     return pd.Series(
-        [cmap(v) if r == "tested" and pd.notna(v) else "white"
+        [tuple(cmap(v)) if r == "tested" and pd.notna(v) else to_rgba("white")
          for r, v in zip(apis["role"], apis.get("unstable_frac", apis["role"]))],
         index=apis.index)
 
@@ -565,8 +571,10 @@ def fig_similarity(apis, sim, out):
     fig, ax = plt.subplots(figsize=(0.40 * len(names) + 3.6,
                                     0.40 * len(names) + 3))
     im = ax.imshow(m, cmap="Blues", vmin=0, vmax=1)
-    ax.set_xticks(range(len(names)), labels, rotation=90, fontsize=7)
-    ax.set_yticks(range(len(names)), labels, fontsize=7)
+    ax.set_xticks(range(len(names)))
+    ax.set_xticklabels(labels, rotation=90, fontsize=7)
+    ax.set_yticks(range(len(names)))
+    ax.set_yticklabels(labels, fontsize=7)
     ax.tick_params(length=0)
     ax.grid(False)
 
@@ -832,7 +840,9 @@ def fig_design_grid(df, out):
         ax.set_xlabel("API loading (wt %)")
         ax.set_title(f"{poly}  ·  {sub['api'].nunique()}/{len(names)} APIs")
 
-    np.atleast_1d(axes)[0].set_yticks(range(len(names)), names, fontsize=8)
+    ax0 = np.atleast_1d(axes)[0]
+    ax0.set_yticks(range(len(names)))
+    ax0.set_yticklabels(names, fontsize=8)
     if has_target:
         handles = [plt.Line2D([], [], marker=m, ls="none", color=c, label=l)
                    for m, c, l in (("o", STABLE, "stable"),
@@ -891,7 +901,8 @@ def fig_reach(apis, sim, out):
                         textcoords="offset points", va="center",
                         fontsize=7.6, color=MUTED)
 
-        ax.set_yticks(y, names[mask][order], fontsize=8)
+        ax.set_yticks(y)
+        ax.set_yticklabels(names[mask][order], fontsize=8)
         ax.set_ylim(-0.6, order.size - 0.4)
         ax.set_xlim(0, 1)
         ax.set_xlabel("Tanimoto similarity to nearest training API")
