@@ -9,12 +9,27 @@ the APIs you might test and the APIs you will finally be judged on:
   --apis     API_information_for_selection.xlsx    the candidate list
   --holdout  FPN wet SDD stability data.xlsx       the final test set
 
-Five figures:
-  1_similarity.png   ECFP4 Tanimoto matrix over every API, clustered
-  2_pca.png          PCA of physicochemical descriptors
-  3_umap.png         UMAP on ECFP4 at three n_neighbors settings
-  4_design_grid.png  API x polymer, loading on x, outcome by marker
-  5_reach.png        similarity to the nearest *tested* API, two panels
+Seven figures:
+  1_similarity.png      ECFP4 Tanimoto matrix over every API, clustered
+  2_pca.png             PCA of one feature set (--features, default structural)
+  3_umap.png            UMAP on ECFP4 at three n_neighbors settings
+  4_design_grid.png     API x polymer, loading on x, outcome by marker
+  5_reach.png           similarity to the nearest *tested* API, two panels
+  6_pca_comparison.png  structural vs physchem side by side
+  7_measured.png        measured thermal / ADMET strips + ionisation class
+
+Features are grouped by provenance and kind, so the groups are disjoint:
+
+  structural        graph descriptors          -> PCA
+  physchem          computed properties and    -> PCA
+                    charge distribution
+  thermal_measured  Tm, Tg, Tm/Tg              -> strip plot
+  admet_measured    S+logP, S+Peff, ionisation -> strip plot
+
+Fingerprints stay out of the PCAs: a sparse 2048-bit vector over a few dozen
+molecules gives a projection dominated by bit sparsity, and Euclidean
+distance on bits is the wrong metric. They do their work in figures 1 and 3,
+which use Jaccard.
 
 Held-out APIs enter by structure only -- no labels are read from that file,
 and the scaler, PCA and UMAP are fitted WITHOUT them and then used to project
@@ -74,13 +89,24 @@ ROLES = {
 RENAME = {"API": "api", "SMILES": "smiles", "Polymer": "polymer_name",
           "API_loading": "api_loading_percent", "truth": "target"}
 
-DESCRIPTORS = ["MolWt", "MolLogP", "TPSA", "NumHDonors", "NumHAcceptors",
-               "NumRotatableBonds", "NumAromaticRings", "FractionCSP3",
-               "HeavyAtomCount", "BertzCT", "Chi0", "Kappa2"]
+# Graph descriptors computed from SMILES. PEOE_VSA1-14 are included because
+# they are reduced below into charge-distribution fractions.
+DESCRIPTORS = [
+    "MolWt", "MolLogP", "TPSA", "NumHDonors", "NumHAcceptors",
+    "NumRotatableBonds", "NumAromaticRings", "NumAliphaticRings",
+    "RingCount", "FractionCSP3", "HeavyAtomCount", "BertzCT", "LabuteASA",
+    "Chi0n", "Chi1n", "Chi2n", "Kappa1", "Kappa2", "Kappa3",
+] + [f"PEOE_VSA{i}" for i in range(1, 15)]
+
+# RDKit bins PEOE surface area by Gasteiger charge at these edges.
+# Low bins are electron-rich surface, high bins electron-poor. Note this runs
+# OPPOSITE to a COSMO sigma profile, where positive sigma is electron-rich.
+PEOE_NEGATIVE = [f"PEOE_VSA{i}" for i in range(1, 7)]    # charge < -0.05
+PEOE_NEUTRAL = ["PEOE_VSA7", "PEOE_VSA8"]                # -0.05 .. +0.05
+PEOE_POSITIVE = [f"PEOE_VSA{i}" for i in range(9, 15)]   # charge > +0.05
 
 # Measured / ADMET columns read from the input files. Spellings differ between
-# the formulation file and the selection file, so each is matched on a
-# normalised name (lower case, alphanumerics only): "S+logP" -> "slogp".
+# files, so each is matched on a normalised name: "S+logP" -> "slogp".
 MEASURED = {
     "tm_deg_c": ["apitmdegreesc", "apitmdegc", "tmdegreesc", "tmdegc",
                  "meltingpoint", "tm"],
@@ -89,49 +115,57 @@ MEASURED = {
     "logp": ["splogp", "slogp", "apilogp", "logp"],
     "permeability": ["speff", "sppeff", "apipermeability", "permeability",
                      "peff"],
+    "acidic_pka_min": ["sacidicpka", "spacidicpka", "acidicpkamin",
+                       "acidicpkalowest", "acidicpka"],
+    "basic_pka_max": ["sbasicpka", "spbasicpka", "basicpkamax",
+                      "basicpkahighest", "basicpka"],
 }
 
-# Three feature sets, deliberately differing in how much they know.
+IONISATION = ["acid", "weak_base", "strong_base", "zwitterion"]
+
+# Four groups, partitioned by provenance and kind rather than by provenance
+# alone, so the sets are disjoint and each answers its own question.
 #
-# structural  generic RDKit descriptors. No labels anywhere in its
-#             construction, so this is the coverage map that can be defended.
-# sme         the api_atts list from wet_stability_model_dev_v0.py, minus the
-#             three ionisation flags, which are derived in
-#             molecule_instance.compute_acid_base_zwitterion from pKa columns
-#             whose thresholds are not reproduced here. Domain-chosen but
-#             still label-free.
-# boruta      the API-level members of hand_currated_boruta_from_drop_one_atts.
-#             Selected against the training labels, so a map drawn in these
-#             axes is label-informed: read it as "where the test set sits in
-#             the space the model keys on", never as evidence the test is fair.
+# structural        graph-derived: connectivity, shape, rings, complexity
+# physchem          computed physicochemical, incl. charge distribution
+# thermal_measured  measured Tm / Tg
+# admet_measured    ADMET Predictor outputs and the ionisation class
 #
-# The four formulation-level members of the Boruta list (form_api_loading,
-# kinetic_tg_mix_theoretical_c, thermo_excess_gibbs_energy,
-# thermo_ln_gamma_api) are undefined for an API with no formulation, so they
-# cannot appear here. Reaching them needs a fixed reference formulation and
-# the TeNNet-SAC engine.
+# The two computed groups get PCA panels; the two measured groups are shown
+# as strip plots, since three or four correlated features give a PCA nothing
+# to do. tm_div_tg_k is deliberately absent from any PCA -- it is a function
+# of Tm and Tg, so including all three double-counts -- but is kept for the
+# strips, where it is the quantity formulators actually read.
+# Pruned against the collinearity report rather than by taste:
+#   HeavyAtomCount ~ Chi1n 0.97, ~ Chi2n 0.93   -> keep HeavyAtomCount only
+#   Kappa2 ~ Kappa3 0.92                        -> keep Kappa2
+#   MolWt ~ LabuteASA 0.99                      -> keep MolWt
+# peoe_neutral_frac is computed in descriptor_frame but deliberately left
+# out of this group: the three fractions sum to one, so any two determine
+# the third. Keeping all three would spend a PCA dimension on an exact
+# linear dependency that pairwise correlation does not necessarily flag.
 FEATURE_SETS = {
-    "structural": ["MolWt", "MolLogP", "TPSA", "NumHDonors", "NumHAcceptors",
-                   "NumRotatableBonds", "NumAromaticRings", "FractionCSP3",
-                   "HeavyAtomCount", "BertzCT"],
-    "sme": ["tm_deg_c", "tg_deg_c", "tm_div_tg_k", "logp", "permeability",
-            "MolWt", "NumRotatableBonds", "NumHAcceptors", "NumHDonors",
-            "Chi0", "Kappa2"],
-    "boruta": ["Chi0", "Kappa2", "MolWt", "NumHAcceptors", "tm_div_tg_k",
-               "permeability"],
+    "structural": ["HeavyAtomCount", "BertzCT", "Kappa2", "RingCount",
+                   "NumAromaticRings", "NumAliphaticRings", "FractionCSP3"],
+    "physchem": ["MolWt", "TPSA", "MolLogP", "NumHDonors", "NumHAcceptors",
+                 "NumRotatableBonds", "peoe_negative_frac",
+                 "peoe_positive_frac"],
 }
 
-# Boruta-6 is a strict subset of the SME-11, so it adds no information --
-# only a reweighting. It is off by default and available via --include-boruta
-# for the separate, post-hoc question of where the test set sits in the space
-# the model actually keys on.
-COMPARE_DEFAULT = ("structural", "sme")
+STRIP_SETS = {
+    "thermal_measured": ["tm_deg_c", "tg_deg_c", "tm_div_tg_k"],
+    "admet_measured": ["logp", "permeability"],
+}
+
+# Each PCA group keeps exactly one size descriptor (HeavyAtomCount,
+# MolWt), so PC1 is not "how big is it" three times over. The per-group
+# collinearity report keeps this auditable as features are added.
+COMPARE_DEFAULT = ("structural", "physchem")
 
 SET_TITLES = {
-    "structural": ("Structural", "generic RDKit descriptors · label-free"),
-    "sme": ("SME physicochemical", "api_atts minus ionisation flags · "
-            "label-free"),
-    "boruta": ("Boruta-selected", "API-level subset · LABEL-INFORMED"),
+    "structural": ("Structural", "graph descriptors · label-free"),
+    "physchem": ("Physicochemical", "computed properties + charge "
+                 "distribution · label-free"),
 }
 
 plt.rcParams.update({"font.size": 9, "axes.titlesize": 11,
@@ -144,6 +178,53 @@ plt.rcParams.update({"font.size": 9, "axes.titlesize": 11,
 
 
 # --- loading ---------------------------------------------------------------
+def canonical_parent(smiles):
+    """
+    Canonical SMILES of the largest fragment.
+
+    Counterions must go before any descriptor is computed: with a salt in the
+    SMILES, MaxPartialCharge becomes the counterion's formal charge (+1 for
+    Li, +2 for Zn) and MolWt counts mass the API does not have.
+    """
+    mol = Chem.MolFromSmiles(str(smiles))
+    if mol is None:
+        return None
+    frags = Chem.GetMolFrags(mol, asMols=True, sanitizeFrags=False)
+    if len(frags) > 1:
+        mol = max(frags, key=lambda m: m.GetNumHeavyAtoms())
+    return Chem.MolToSmiles(mol)
+
+
+def ionisation_flags(acidic_pka_min, basic_pka_max):
+    """
+    acid / weak_base / strong_base / zwitterion from pKa.
+
+    Transcribed from molecule_instance.compute_acid_base_zwitterion in
+    ads_molecule_classes.py (thresholds 6.5 and 2, attributed there to Mike
+    Morgen), rather than imported -- importing that module pulls in torch and
+    tennetsac, which this script otherwise does not need.
+    """
+    acid_threshold, base_lower, base_upper = 6.5, 2.0, 6.5
+    acid = weak_base = strong_base = zwitterion = 0
+
+    has_acid = acidic_pka_min is not None and not pd.isna(acidic_pka_min)
+    has_base = basic_pka_max is not None and not pd.isna(basic_pka_max)
+
+    if has_acid and acidic_pka_min < acid_threshold:
+        acid = 1
+    if has_base:
+        if basic_pka_max > base_upper:
+            strong_base = 1
+        elif basic_pka_max > base_lower:
+            weak_base = 1
+        if basic_pka_max > base_lower and has_acid:
+            if (acidic_pka_min < acid_threshold
+                    and acidic_pka_min < basic_pka_max):
+                zwitterion = 1
+    return {"acid": acid, "weak_base": weak_base,
+            "strong_base": strong_base, "zwitterion": zwitterion}
+
+
 def _parse_record(text):
     """
     Parse one cell holding a record. Accepts JSON and Python-literal dicts,
@@ -295,7 +376,8 @@ def load_formulations(path, sheet=0, header=None):
     """The formulation table: one row per API x polymer x loading."""
     raw = _read(path, sheet, header, FORMULATION_REQUIRED)
     df = raw.rename(columns={k: v for k, v in RENAME.items()})
-    df["smiles"] = [Chem.MolToSmiles(Chem.MolFromSmiles(s)) for s in df["smiles"]]
+    df["smiles"] = [canonical_parent(s) for s in df["smiles"]]
+    df = df.dropna(subset=["smiles"])
     for col, values in extract_measured(raw).items():
         df[col] = values.values
     return df
@@ -313,8 +395,7 @@ def load_api_list(path, sheet=0, header=None):
     smi_col = _find_column(df, ["smiles"], contains="smiles")
     out = pd.DataFrame({
         "api": df[name_col].astype(str).str.strip(),
-        "smiles": [Chem.MolToSmiles(m) if (m := Chem.MolFromSmiles(str(s)))
-                   else None for s in df[smi_col]],
+        "smiles": [canonical_parent(s) for s in df[smi_col]],
     })
     for col, values in extract_measured(df).items():
         out[col] = values.values
@@ -437,17 +518,55 @@ def tanimoto(fps):
 
 
 def descriptor_frame(apis):
-    """RDKit descriptors plus whatever measured properties came from the files."""
+    """RDKit descriptors, charge fractions, measured properties, ionisation."""
     rows = [{d: Descriptors.CalcMolDescriptors(Chem.MolFromSmiles(s)).get(d)
              for d in DESCRIPTORS} for s in apis["smiles"]]
     out = pd.DataFrame(rows, index=apis.index)
+
+    # Charge distribution as three fractions of surface area. Preferred over
+    # Max/MinPartialCharge, which are two order statistics of the same
+    # quantity and go NaN on elements Gasteiger has no parameters for.
+    peoe_total = out[[c for c in out.columns
+                      if c.startswith("PEOE_VSA")]].sum(axis=1)
+    safe = peoe_total.replace(0, np.nan)
+    out["peoe_negative_frac"] = out[PEOE_NEGATIVE].sum(axis=1) / safe
+    out["peoe_neutral_frac"] = out[PEOE_NEUTRAL].sum(axis=1) / safe
+    out["peoe_positive_frac"] = out[PEOE_POSITIVE].sum(axis=1) / safe
+
     for col in MEASURED:
         if col in apis.columns:
             out[col] = pd.to_numeric(apis[col], errors="coerce")
     if {"tm_deg_c", "tg_deg_c"} <= set(out.columns):
         out["tm_div_tg_k"] = ((out["tm_deg_c"] + 273.15)
                               / (out["tg_deg_c"] + 273.15))
+
+    if {"acidic_pka_min", "basic_pka_max"} <= set(out.columns):
+        flags = [ionisation_flags(a, b) for a, b in
+                 zip(out["acidic_pka_min"], out["basic_pka_max"])]
+        for key in IONISATION:
+            out[key] = [f[key] for f in flags]
     return out
+
+
+def report_collinearity(X, name, threshold=0.9):
+    """
+    Name the near-duplicate pairs inside a feature group.
+
+    Several descriptors in each group track molecular size, so a PC1 can be
+    "how big is it" three times over. Reporting the pairs makes that visible
+    instead of leaving it to be inferred from the loadings.
+    """
+    if X.shape[1] < 2 or len(X) < 4:
+        return
+    corr = X.corr(method="spearman").abs()
+    pairs = [(corr.columns[i], corr.columns[j], corr.iat[i, j])
+             for i in range(len(corr)) for j in range(i + 1, len(corr))
+             if corr.iat[i, j] >= threshold]
+    if pairs:
+        print(f"  {name}: {len(pairs)} near-duplicate pair(s) "
+              f"(|rho| >= {threshold})")
+        for a, b, r in sorted(pairs, key=lambda t: -t[2])[:5]:
+            print(f"      {a} ~ {b}  rho={r:.2f}")
 
 
 def feature_frame(apis, which, verbose=False):
@@ -472,7 +591,10 @@ def feature_frame(apis, which, verbose=False):
             print(f"  {which}: dropping {len(incomplete)} API(s) with gaps "
                   f"({', '.join(incomplete[:6])}"
                   f"{', ...' if len(incomplete) > 6 else ''})")
-    return X.dropna()
+    X = X.dropna()
+    if verbose:
+        report_collinearity(X, which)
+    return X
 
 
 # --- drawing helpers -------------------------------------------------------
@@ -716,10 +838,6 @@ def fig_pca_comparison(apis, out, sets=COMPARE_DEFAULT):
             "connectivity alone; SME adds measured thermal and ADMET "
             "properties, so disagreement between the panels marks an API "
             "whose property profile its structure does not predict.")
-    if "boruta" in frames:
-        note += (" The Boruta panel is label-informed -- its axes were chosen "
-                 "using training outcomes, so it cannot be used to argue the "
-                 "held-out test is fair.")
     fig.text(0, -0.03, note, fontsize=7.5, color=MUTED, va="top")
     fig.savefig(out / "6_pca_comparison.png")
     plt.close(fig)
@@ -920,6 +1038,90 @@ def fig_reach(apis, sim, out):
     plt.close(fig)
 
 
+STRIP_LABELS = {
+    "tm_deg_c": "Tm (°C)", "tg_deg_c": "Tg (°C)",
+    "tm_div_tg_k": "Tm / Tg (K)", "logp": "S+logP",
+    "permeability": "S+Peff",
+}
+
+
+def fig_measured(apis, out):
+    """
+    Measured thermal and ADMET properties as strip plots, plus the
+    ionisation class.
+
+    A strip rather than a PCA: three or four correlated measured properties
+    give a projection nothing to do, and each value is readable on its own.
+    """
+    full = descriptor_frame(apis)
+    rows = [(group, col) for group, cols in STRIP_SETS.items()
+            for col in cols if col in full.columns and full[col].notna().any()]
+    have_ion = all(k in full.columns for k in IONISATION)
+    if not rows:
+        print("  skipped 7_measured.png (no measured properties found)")
+        return
+
+    n = len(rows) + (1 if have_ion else 0)
+    fig, axes = plt.subplots(n, 1, figsize=(10.5, 1.25 * n + 1.8),
+                             squeeze=False)
+    rng = np.random.default_rng(0)
+    role_y = {"tested": 0.22, "candidate": 0.0, "holdout": -0.22}
+
+    for ax, (group, col) in zip(axes[: len(rows), 0], rows):
+        vals = full[col].astype(float)
+        for role, (marker, edge, label) in ROLES.items():
+            sel = (apis["role"] == role).values
+            if not sel.any():
+                continue
+            y = role_y[role] + rng.uniform(-0.06, 0.06, int(sel.sum()))
+            ax.scatter(vals[sel], y, marker=marker,
+                       c=list(_face(apis)[sel]), edgecolor=edge,
+                       linewidth=1.3, s=58, zorder=3)
+        ax.set_yticks(list(role_y.values()))
+        ax.set_yticklabels(["tested", "cand.", "held-out"], fontsize=7)
+        ax.set_ylim(-0.42, 0.42)
+        ax.grid(axis="y", visible=False)
+        finite = vals.dropna()
+        ax.text(1.005, 0.5,
+                f"{STRIP_LABELS.get(col, col)}\nmedian {finite.median():,.1f}",
+                transform=ax.transAxes, fontsize=7.6, va="center",
+                color=MUTED)
+        ax.text(0.0, 1.03, f"{group} · {len(finite)} of {len(apis)} APIs",
+                transform=ax.transAxes, fontsize=7, color=MUTED)
+
+    if have_ion:
+        ax = axes[len(rows), 0]
+        order = list(ROLES)
+        width = 0.8 / len(IONISATION)
+        for k, flag in enumerate(IONISATION):
+            counts = [int(full.loc[(apis["role"] == r).values, flag].sum())
+                      for r in order]
+            xs = np.arange(len(order)) + (k - 1.5) * width
+            ax.bar(xs, counts, width=width * 0.9, zorder=3,
+                   color=plt.matplotlib.colors.to_rgba(STABLE,
+                                                       0.45 + 0.18 * k),
+                   label=flag.replace("_", " "))
+        ax.set_xticks(np.arange(len(order)))
+        ax.set_xticklabels([ROLES[r][2] for r in order], fontsize=7.6)
+        ax.set_ylabel("APIs", fontsize=8)
+        ax.grid(axis="x", visible=False)
+        ax.legend(ncol=4, fontsize=7.5, loc="upper right")
+        ax.text(0.0, 1.03, "admet_measured · ionisation class from pKa "
+                "(thresholds 6.5 / 2)", transform=ax.transAxes, fontsize=7,
+                color=MUTED)
+
+    fig.suptitle("Measured properties by role", x=0.0, ha="left",
+                 fontsize=12, fontweight="semibold")
+    fig.tight_layout(rect=(0, 0, 0.88, 0.95))
+    fig.text(0, -0.03, "Marker shape and row both carry the role; fill "
+             "colour carries the outcome for tested APIs. A property whose "
+             "held-out points fall outside the tested spread is an "
+             "extrapolation the structural maps will not show.",
+             fontsize=7.5, color=MUTED, va="top")
+    fig.savefig(out / "7_measured.png")
+    plt.close(fig)
+
+
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--input", required=True, help="formulation table")
@@ -935,9 +1137,6 @@ def main():
                    help="feature set for the main PCA (default: structural)")
     p.add_argument("--no-compare", dest="compare", action="store_false",
                    help="skip the feature-set comparison figure")
-    p.add_argument("--include-boruta", action="store_true",
-                   help="add the label-informed Boruta panel to the "
-                        "comparison (a strict subset of the SME set)")
     a = p.parse_args()
 
     out = Path(a.outdir)
@@ -970,8 +1169,8 @@ def main():
     fig_design_grid(df, out)
     fig_reach(apis, sim, out)
     if a.compare:
-        sets = COMPARE_DEFAULT + (("boruta",) if a.include_boruta else ())
-        fig_pca_comparison(apis, out, sets)
+        fig_pca_comparison(apis, out, COMPARE_DEFAULT)
+    fig_measured(apis, out)
     print(f"\nwrote figures to {out}")
 
 
