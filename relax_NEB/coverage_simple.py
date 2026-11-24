@@ -54,6 +54,7 @@ need the TeNNet-SAC stack.
 import argparse
 import ast
 import json
+import re
 from pathlib import Path
 
 import matplotlib
@@ -115,10 +116,24 @@ MEASURED = {
     "logp": ["splogp", "slogp", "apilogp", "logp"],
     "permeability": ["speff", "sppeff", "apipermeability", "permeability",
                      "peff"],
-    "acidic_pka_min": ["sacidicpka", "spacidicpka", "acidicpkamin",
-                       "acidicpkalowest", "acidicpka"],
-    "basic_pka_max": ["sbasicpka", "spbasicpka", "basicpkamax",
-                      "basicpkahighest", "basicpka"],
+    "acidic_pka_min": ["sacidicpkamin", "sacidicpka", "spacidicpkamin",
+                       "spacidicpka", "acidicpkamin", "acidicpkalowest",
+                       "acidicpka"],
+    "basic_pka_max": ["sbasicpkamax", "sbasicpka", "spbasicpkamax",
+                      "spbasicpka", "basicpkamax", "basicpkahighest",
+                      "basicpka"],
+}
+
+# Fallback for columns whose exact spelling is not listed above: match on
+# required tokens, then prefer the variant that matches the aggregation we
+# want. ADMET exports vary ("S+Acidic_pKa", "S+Acidic_pKa_min",
+# "Acidic_pKa_lowest"), so exact lists alone keep going stale.
+MEASURED_TOKENS = {
+    "acidic_pka_min": (("acidic", "pka"), ("min", "lowest")),
+    "basic_pka_max": (("basic", "pka"), ("max", "highest")),
+    "permeability": (("peff",), ()),
+    "tm_deg_c": (("tm",), ("deg", "melt")),
+    "tg_deg_c": (("tg",), ("deg", "glass")),
 }
 
 IONISATION = ["acid", "weak_base", "strong_base", "zwitterion"]
@@ -347,6 +362,41 @@ def _normalise(name):
     return "".join(ch for ch in str(name).lower() if ch.isalnum())
 
 
+PKA_COLUMNS = {"acidic_pka_min": "min", "basic_pka_max": "max"}
+
+
+def parse_pka(value, mode):
+    """
+    One pKa number from a cell that may hold several.
+
+    ADMET Predictor emits zero, one or many pKa values per molecule, written
+    into a single cell as "3.5; 9.8". pd.to_numeric turns that into NaN,
+    which silently zeroes every ionisation flag. Mirrors the intent of
+    molecule_instance.create_list_from_str: lowest acidic, highest basic.
+    """
+    if value is None or (isinstance(value, float) and pd.isna(value)):
+        return np.nan
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, (list, tuple)):
+        parts = [str(v) for v in value]
+    else:
+        parts = re.split(r"[;,|/]", str(value))
+    nums = []
+    for part in parts:
+        part = part.strip()
+        if not part:
+            continue
+        try:
+            nums.append(float(part))
+        except ValueError:
+            found = re.findall(r"-?\d+\.?\d*", part)
+            nums.extend(float(f) for f in found)
+    if not nums:
+        return np.nan
+    return min(nums) if mode == "min" else max(nums)
+
+
 def extract_measured(df):
     """
     Pull Tm, Tg, logP and permeability out of whatever they are called here.
@@ -355,13 +405,54 @@ def extract_measured(df):
     property degrades the affected feature set rather than crashing.
     """
     lookup = {_normalise(c): c for c in df.columns}
-    found = {}
-    for target, options in MEASURED.items():
+
+    def resolve(target, options):
         for opt in options:
             if opt in lookup:
-                found[target] = pd.to_numeric(df[lookup[opt]], errors="coerce")
-                break
+                return lookup[opt]
+        required, preferred = MEASURED_TOKENS.get(target, ((), ()))
+        if not required:
+            return None
+        hits = [orig for low, orig in lookup.items()
+                if all(tok in low for tok in required)]
+        if not hits:
+            return None
+        for tok in preferred:
+            for orig in hits:
+                if tok in _normalise(orig):
+                    return orig
+        return hits[0]
+
+    found, report = {}, {}
+    for target, options in MEASURED.items():
+        col = resolve(target, options)
+        if col is not None:
+                raw = df[col]
+                if target in PKA_COLUMNS:
+                    values = raw.map(lambda v: parse_pka(v, PKA_COLUMNS[target]))
+                else:
+                    values = pd.to_numeric(raw, errors="coerce")
+                found[target] = values
+                report[target] = (col, int(values.notna().sum()),
+                                  len(values), raw.dropna().iloc[0]
+                                  if raw.notna().any() else None)
+    extract_measured.last_report = report
     return pd.DataFrame(found, index=df.index)
+
+
+def report_measured(path, report):
+    """Say which measured columns were found, and whether they parsed."""
+    name = Path(path).name
+    for target in MEASURED:
+        if target not in report:
+            print(f"  {name}: '{target}' column NOT FOUND")
+            continue
+        col, ok, total, sample = report[target]
+        if ok == 0:
+            print(f"  {name}: '{target}' found as '{col}' but 0/{total} "
+                  f"parsed; first raw value: {sample!r}")
+        elif ok < total:
+            print(f"  {name}: '{target}' from '{col}' -- {ok}/{total} parsed")
 
 
 FORMULATION_REQUIRED = [(["api", "api_name"], "api"),
@@ -378,7 +469,9 @@ def load_formulations(path, sheet=0, header=None):
     df = raw.rename(columns={k: v for k, v in RENAME.items()})
     df["smiles"] = [canonical_parent(s) for s in df["smiles"]]
     df = df.dropna(subset=["smiles"])
-    for col, values in extract_measured(raw).items():
+    measured = extract_measured(raw)
+    report_measured(path, extract_measured.last_report)
+    for col, values in measured.items():
         df[col] = values.values
     return df
 
@@ -397,7 +490,9 @@ def load_api_list(path, sheet=0, header=None):
         "api": df[name_col].astype(str).str.strip(),
         "smiles": [canonical_parent(s) for s in df[smi_col]],
     })
-    for col, values in extract_measured(df).items():
+    measured = extract_measured(df)
+    report_measured(path, extract_measured.last_report)
+    for col, values in measured.items():
         out[col] = values.values
     out = out.dropna(subset=["smiles"])
     return out.drop_duplicates("api").set_index("api").sort_index()
