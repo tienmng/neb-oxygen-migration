@@ -9,11 +9,11 @@ the APIs you might test and the APIs you will finally be judged on:
   --apis     API_information_for_selection.xlsx    the candidate list
   --holdout  FPN wet SDD stability data.xlsx       the final test set
 
-Seven figures:
+Six figures (no 2_pca.png: the single-panel PCA was the
+structural half of 6_pca_comparison.png):
   1_similarity.png      ECFP4 Tanimoto matrix over every API, clustered
-  2_pca.png             PCA of one feature set (--features, default structural)
   3_umap.png            UMAP on ECFP4 at three n_neighbors settings
-  4_design_grid.png     API x polymer, loading on x, outcome by marker
+  4_design_grid.png     API x polymer, loading on x, outcome by colour
   5_reach.png           similarity to the nearest *tested* API, two panels
   6_pca_comparison.png  structural vs physchem side by side
   7_measured.png        measured thermal / ADMET strips + ionisation class
@@ -867,22 +867,6 @@ def _titled_notes(ax, title, lines, start=1.012, step=0.030):
             color=INK, ha="left", va="bottom")
 
 
-def fig_pca(apis, out, which="structural"):
-    X = feature_frame(apis, which, verbose=True)
-    fig, ax = plt.subplots(figsize=(10, 8.2))
-    _, drivers = _pca_panel(ax, apis, X)
-    name, note = SET_TITLES[which]
-
-    _titled_notes(ax, f"{name} property space (PCA)", drivers[::-1] + [
-        f"{X.shape[1]} scaled features · {note} · {len(X)} of {len(apis)} "
-        "APIs · axes fitted without the held-out set"])
-    _legend(ax, apis.loc[X.index])
-    fig.text(0, -0.03, "Features: " + ", ".join(X.columns),
-             fontsize=7.5, color=MUTED, va="top")
-    fig.savefig(out / "2_pca.png")
-    plt.close(fig)
-
-
 def fig_pca_comparison(apis, out, sets=COMPARE_DEFAULT):
     """
     The same APIs under two (or three) feature sets, side by side.
@@ -1036,7 +1020,12 @@ def fig_design_grid(df, out):
                         alpha=0.45, zorder=2)
             if has_target:
                 t = g["target"].values
-                for val, marker, color in ((0, "o", STABLE), (1, "X", UNSTABLE)):
+                # Dots for both classes: red = positive (target 1,
+                # crystalline), blue = negative (target 0). Colour alone
+                # carries the outcome here, which is acceptable only because
+                # blue/red clears the colour-vision separation floor
+                # (deutan dE 23.8); green/red would not.
+                for val, marker, color in ((0, "o", STABLE), (1, "o", UNSTABLE)):
                     sel = t == val
                     if sel.any():
                         ax.scatter(x[sel], np.full(sel.sum(), y), marker=marker,
@@ -1057,17 +1046,20 @@ def fig_design_grid(df, out):
     ax0.set_yticks(range(len(names)))
     ax0.set_yticklabels(names, fontsize=8)
     if has_target:
-        handles = [plt.Line2D([], [], marker=m, ls="none", color=c, label=l)
-                   for m, c, l in (("o", STABLE, "stable"),
-                                   ("X", UNSTABLE, "unstable"))]
+        handles = [plt.Line2D([], [], marker="o", ls="none", color=c, label=l)
+                   for c, l in ((STABLE, "stable / amorphous (0)"),
+                                (UNSTABLE, "unstable / crystalline (1)"))]
         handles.append(plt.Line2D([], [], marker="s", ls="none", color=GRID,
                                   label="not tested"))
         fig.legend(handles=handles, loc="lower left", ncol=3,
-                   bbox_to_anchor=(0, 0.93), fontsize=8)
+                   bbox_to_anchor=(0, 0.905), fontsize=8)
 
-    fig.suptitle("Formulation design grid (training APIs only)", x=0.0,
-                 ha="left", fontsize=12, fontweight="semibold")
-    fig.tight_layout(rect=(0, 0, 1, 0.9))
+    fig.tight_layout(rect=(0, 0, 1, 0.87))
+    # Title placed absolutely rather than via suptitle, which tight_layout
+    # was dropping onto the legend row once the labels got longer.
+    fig.text(0.0, 0.995, "Formulation design grid (training APIs only)",
+             fontsize=12, fontweight="semibold", color=INK, ha="left",
+             va="top")
     fig.savefig(out / "4_design_grid.png")
     plt.close(fig)
 
@@ -1227,9 +1219,6 @@ def main():
     p.add_argument("--header", type=int, default=None,
                    help="0-based header row, forced for every file. Omit to "
                         "detect it per file (title rows are handled).")
-    p.add_argument("--features", default="structural",
-                   choices=list(FEATURE_SETS),
-                   help="feature set for the main PCA (default: structural)")
     p.add_argument("--no-compare", dest="compare", action="store_false",
                    help="skip the feature-set comparison figure")
     a = p.parse_args()
@@ -1259,7 +1248,6 @@ def main():
           f"{cells}/{n_tested * n_poly} cells filled\n")
 
     fig_similarity(apis, sim, out)
-    fig_pca(apis, out, which=a.features)
     fig_umap(apis, fps, out)
     fig_design_grid(df, out)
     fig_reach(apis, sim, out)
