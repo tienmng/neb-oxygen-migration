@@ -29,6 +29,13 @@ Built for 7 API groups, not for 37 rows. Everything here follows from that:
                                   rerun. The gap between real and null is the
                                   result; the absolute number is not.
 
+  L2 before L1 for deployment.    Lasso deletes a weakly-supported feature,
+                                  so the model can never respond to it. Ridge
+                                  shrinks it, so when it moves far outside the
+                                  training range it still contributes. With 7
+                                  groups L1 will zero most polymer and
+                                  complementarity terms -- see --keep.
+
 Outputs
 -------
   model_comparison.png    pooled AUC / F2 per model against the baselines
@@ -324,6 +331,11 @@ def main():
     p.add_argument("--target-recall", type=float, default=0.90)
     p.add_argument("--null-rounds", type=int, default=20)
     p.add_argument("--no-null", action="store_true")
+    p.add_argument("--keep", default="",
+                   help="comma-separated features always included alongside "
+                        "the chosen set; a trailing * matches by prefix. Use "
+                        "for axes you intend to extrapolate along (poly_*), "
+                        "which 7 groups cannot justify on fit alone.")
     a = p.parse_args()
 
     out = Path(a.outdir)
@@ -352,6 +364,20 @@ def main():
             feats = list(var.head(6).index)
             print("mechanistic preset unavailable; using the 6 highest-"
                   "variance features instead")
+
+    protected = []
+    for pat in a.keep.split(","):
+        pat = pat.strip()
+        if not pat:
+            continue
+        protected += ([c for c in numeric if c.startswith(pat[:-1])]
+                      if pat.endswith("*") else
+                      ([pat] if pat in numeric else []))
+    protected = [c for c in sorted(set(protected)) if c not in feats]
+    if protected:
+        print(f"protected features added ({len(protected)}): "
+              f"{', '.join(protected)}")
+        feats = feats + protected
     X = df[feats].copy()
 
     print(f"{len(df)} rows · {groups.nunique()} groups · {len(feats)} features")

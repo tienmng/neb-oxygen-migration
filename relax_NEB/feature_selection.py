@@ -48,6 +48,7 @@ from pathlib import Path
 
 import matplotlib
 matplotlib.use("Agg")
+import matplotlib.patheffects as pe
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -79,18 +80,72 @@ DROP_ALWAYS = {"api", "polymer", "polymer_name", "target", "truth", "role",
 # ===========================================================================
 # Step 1 -- unsupervised pruning
 # ===========================================================================
-def prune_unsupervised(X, nzv_threshold=0.01, corr_threshold=0.9):
+def expand_protected(patterns, columns):
+    """Resolve --keep entries; a trailing * matches by prefix."""
+    out = []
+    for pat in patterns:
+        pat = pat.strip()
+        if not pat:
+            continue
+        if pat.endswith("*"):
+            out += [c for c in columns if c.startswith(pat[:-1])]
+        elif pat in columns:
+            out.append(pat)
+    return sorted(set(out))
+
+
+def range_expansion(train_X, cand_X):
+    """
+    How much further each feature ranges outside the training set.
+
+    Selection failure has two opposite causes that look identical in a narrow
+    dataset: the feature does not matter, or it barely varies so there is
+    nothing to detect. This separates them. A feature that is rarely selected
+    but whose range expands sharply over the candidates is untested, not
+    unimportant -- and dropping it leaves the model unable to respond when it
+    moves.
+    """
+    rows = []
+    for col in train_X.columns:
+        if col not in cand_X.columns:
+            continue
+        t = train_X[col].dropna()
+        c = cand_X[col].dropna()
+        if len(t) < 2 or len(c) < 2:
+            continue
+        t_lo, t_hi = t.min(), t.max()
+        t_spread = t_hi - t_lo
+        c_spread = c.max() - c.min()
+        ratio = (c_spread / t_spread) if t_spread > 0 else np.inf
+        outside = float(((c < t_lo) | (c > t_hi)).mean())
+        rows.append({"feature": col,
+                     "train_spread": float(t_spread),
+                     "candidate_spread": float(c_spread),
+                     "range_ratio": float(min(ratio, 99.0)),
+                     "frac_candidates_outside": outside})
+    return pd.DataFrame(rows).set_index("feature")
+
+
+def prune_unsupervised(X, nzv_threshold=0.01, corr_threshold=0.9,
+                       protected=()):
     """
     Drop near-constant and near-duplicate features.
 
     Uses no labels, so it does not have to live inside the CV loop and cannot
     leak. Doing it first is what makes the supervised step affordable.
+
+    Protected features are exempt: they carry an axis the model is meant to
+    extrapolate along, and that justification comes from mechanism, not from
+    how much they happen to vary across seven molecules.
     """
+    protected = set(protected)
     report, keep = [], list(X.columns)
 
     nunique = X.nunique()
     std = X.std(ddof=0)
     for col in list(keep):
+        if col in protected:
+            continue
         if nunique[col] <= 1 or std[col] <= nzv_threshold * abs(X[col].mean() or 1):
             keep.remove(col)
             report.append({"feature": col, "reason": "near-zero variance",
@@ -105,8 +160,14 @@ def prune_unsupervised(X, nzv_threshold=0.01, corr_threshold=0.9):
                 continue
             r = corr.loc[a, b]
             if r >= corr_threshold:
+                if a in protected and b in protected:
+                    continue
                 # Keep the one with more distinct values; it carries more.
                 drop = b if nunique[a] >= nunique[b] else a
+                if drop in protected:
+                    drop = a if drop == b else b
+                if drop in protected:
+                    continue
                 kept = a if drop == b else b
                 keep.remove(drop)
                 report.append({"feature": drop,
@@ -306,6 +367,72 @@ def fig_stability(freq, null_table, out, limit=20):
     plt.close(fig)
 
 
+def fig_range_expansion(freq, expansion, out, ratio_cut=1.5, sel_cut=0.5):
+    """
+    Selection frequency against range expansion.
+
+    The bottom-right quadrant is the one this figure exists for: features the
+    data could not justify, which nonetheless vary far more over the
+    candidates than over the training set.
+    """
+    df = expansion.join(freq[["mean_frac"]], how="inner").dropna()
+    if df.empty:
+        print("  skipped fs_range_expansion.png (no overlapping features)")
+        return
+
+    x = np.log2(df["range_ratio"].clip(lower=0.05))
+    y = df["mean_frac"]
+    at_risk = (df["range_ratio"] >= ratio_cut) & (df["mean_frac"] < sel_cut)
+
+    fig, ax = plt.subplots(figsize=(10, 7))
+    ax.axvspan(np.log2(ratio_cut), max(x.max(), np.log2(ratio_cut)) + 0.6,
+               ymin=0, ymax=sel_cut, color=UNSTABLE, alpha=0.07, lw=0)
+    ax.axvline(np.log2(ratio_cut), color=MUTED, ls="--", lw=0.9)
+    ax.axhline(sel_cut, color=MUTED, ls="--", lw=0.9)
+
+    ax.scatter(x[~at_risk], y[~at_risk], s=70, color=STABLE,
+               edgecolor="white", linewidth=1.2, zorder=3, label="other")
+    ax.scatter(x[at_risk], y[at_risk], s=100, color=UNSTABLE,
+               edgecolor="white", linewidth=1.2, zorder=4,
+               label="untested, not unimportant")
+    # Greedy vertical placement: these points cluster tightly in y, so a
+    # fixed offset stacks every label on top of the last.
+    placed = []
+    for name in df.index[at_risk]:
+        px = np.log2(max(df.loc[name, "range_ratio"], 0.05))
+        py = df.loc[name, "mean_frac"]
+        dy = 0.0
+        for cand in (0.0, 0.045, -0.045, 0.09, -0.09, 0.135, -0.135,
+                     0.18, -0.18, 0.225, -0.225):
+            if all(abs(px - qx) > 1.15 or abs(py + cand - qy) > 0.038
+                   for qx, qy in placed):
+                dy = cand
+                break
+        placed.append((px, py + dy))
+        ax.annotate(name, (px, py), xytext=(8, dy * 260),
+                    textcoords="offset points", fontsize=7.0, va="center",
+                    color=UNSTABLE,
+                    path_effects=[pe.withStroke(linewidth=2.4,
+                                                foreground="white")])
+
+    ax.set_xlabel("log2( candidate range / training range )")
+    ax.set_xlim(x.min() - 0.3, x.max() + 1.5)
+    ax.set_ylabel("fraction of folds selecting the feature")
+    ax.set_ylim(-0.05, 1.05)
+    ax.legend(loc="upper left", fontsize=8)
+    ax.set_title("Untested or unimportant?", pad=22)
+    ax.text(0, 1.01, "right of the dashed line a feature varies more over "
+            "the candidates than it ever did in training",
+            transform=ax.transAxes, fontsize=8, color=MUTED)
+    fig.text(0, -0.02, "Shaded quadrant: the data could not justify these "
+             "features, but they move into territory the training set never "
+             "covered. Dropping them leaves the model unable to respond when "
+             "they change — protect them with --keep rather than selecting "
+             "them away.", fontsize=7.5, color=MUTED, va="top")
+    fig.savefig(out / "fs_range_expansion.png")
+    plt.close(fig)
+
+
 def fig_null(aucs, null_aucs, out):
     if not aucs:
         print("  skipped fs_null.png (no fold had both classes in the test set)")
@@ -353,15 +480,31 @@ def main():
     p.add_argument("--top-k", type=int, default=5,
                    help="features counted as selected per fold by RF importance")
     p.add_argument("--no-null", action="store_true")
+    p.add_argument("--keep", default="",
+                   help="comma-separated features exempt from pruning; a "
+                        "trailing * matches by prefix, e.g. 'poly_*,pair_*'")
+    p.add_argument("--candidate-features", default=None,
+                   help="CSV of untested rows for the range-expansion "
+                        "diagnostic; defaults to the reference/candidate rows "
+                        "of --features when it has a 'role' column")
     a = p.parse_args()
 
     out = Path(a.outdir)
     out.mkdir(parents=True, exist_ok=True)
 
-    df = pd.read_csv(a.features)
+    full = pd.read_csv(a.features)
+    df = full.copy()
     if "source" in df.columns:
         df = df[df["source"] == "observed"]
     df = df[df[a.target_col].notna()].reset_index(drop=True)
+
+    # Untested rows, for the range-expansion diagnostic.
+    if a.candidate_features:
+        cand = pd.read_csv(a.candidate_features)
+    elif "role" in full.columns:
+        cand = full[full["role"].isin(["candidate", "holdout"])]
+    else:
+        cand = pd.DataFrame()
 
     y = df[a.target_col].astype(int)
     groups = df[a.group_col].astype(str)
@@ -375,7 +518,12 @@ def main():
           f"({a.group_col}) · {X.shape[1]} numeric features")
     print(f"class balance: {int((y == 0).sum())} / {int((y == 1).sum())}\n")
 
-    keep, pruning = prune_unsupervised(X, corr_threshold=a.corr_threshold)
+    protected = expand_protected(a.keep.split(","), list(X.columns))
+    if protected:
+        print(f"protected from pruning ({len(protected)}): "
+              f"{', '.join(protected)}\n")
+    keep, pruning = prune_unsupervised(X, corr_threshold=a.corr_threshold,
+                                       protected=protected)
     if not pruning.empty:
         pruning.to_csv(out / "pruning_report.csv", index=False)
         print(f"step 1 -- pruned {len(pruning)} of {X.shape[1]} features")
@@ -414,9 +562,32 @@ def main():
                       "frequencies above should not be read as a feature set.")
 
     freq["null_mean_frac"] = null_table.reindex(freq.index)
+
+    expansion = pd.DataFrame()
+    if not cand.empty:
+        shared = [c for c in X.columns if c in cand.columns]
+        if shared:
+            expansion = range_expansion(X[shared], cand[shared])
+            freq = freq.join(expansion, how="left")
+            at_risk = expansion[(expansion["range_ratio"] >= 1.5)
+                                & (freq["mean_frac"].reindex(expansion.index)
+                                   < 0.5)]
+            if len(at_risk):
+                print(f"\nuntested rather than unimportant ({len(at_risk)}): "
+                      "rarely selected, but range expands over the candidates")
+                for name, r in at_risk.sort_values(
+                        "range_ratio", ascending=False).head(8).iterrows():
+                    print(f"    {name:<28} range x{r['range_ratio']:.1f}  "
+                          f"{r['frac_candidates_outside']:.0%} of candidates "
+                          "outside training range")
+                print("    consider --keep for these, and prefer L2 over L1 "
+                      "so they are shrunk rather than deleted")
+
     freq.to_csv(out / "selection_stability.csv")
     fig_stability(freq, null_table, out)
     fig_null(aucs, null_aucs, out)
+    if not expansion.empty:
+        fig_range_expansion(freq, expansion, out)
     print(f"\nwrote to {out}")
     return 0
 
